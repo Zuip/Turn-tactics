@@ -1,0 +1,52 @@
+<html>
+<head>
+<title>jotain</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="stylesheet" type="text/css" href="app/style.css">
+<script src="app/js/jquery-2.0.2.js"></script>
+<script src="app/js/ejs.js"></script>
+
+<script src="app/controllers/index.js"></script>
+<script src="app/controllers/editor.js"></script>
+<script src="app/controllers/login.js"></script>
+<script src="app/controllers/register.js"></script>
+
+<script src="app/js/template.js"></script>
+<script src="app/language/<%- language %>.js"></script>
+</head>
+<body>
+
+<div id="border">
+	<div id="logo">
+		<div id="topic">
+			<h1><%= messages.browsergame %></h1>
+		</div>
+		<div id="login">
+			<h5><a onclick="buildPage(event, 'login')" href="?login"  class="inner_link"><%= messages.login %></a></h5>
+		</div>
+	</div>
+	<div id="container">
+		<div id="navigation">
+			<h2><%= messages.navigation %></h2>
+			<ul>
+				<li><a onclick="buildPage(event, 'index')" href="?index" class="inner_link"><%= messages.index %></a></li>
+				<li><a onclick="buildPage(event, 'editor')" href="?editor"  class="inner_link"><%= messages.editor %></a></li><% if (login) { %>
+				<!--<li><a onclick="buildPage(event, 'logout')" href="?logout"  class="inner_link"><%= messages.logout %></a></li>-->
+				<% } else { %>
+				<!--<li><a onclick="buildPage(event, 'login')" href="?login"  class="inner_link"><%= messages.login %></a></li>-->
+				<% } %>
+			</ul>
+		</div>
+		<div id="content">
+			<div id="main">
+			<%- content %>
+			</div>
+			<div id="footer">
+				2013 © Sanep & Zuip
+			</div>
+		</div>
+	</div>
+</div>
+
+</body>
+</html>
