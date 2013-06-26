@@ -17,26 +17,13 @@ var languages = { en: require('./app/language/en.js')
 				};		
 var language = "en";
 
-
+// These can be changed later
 var connection = mysql.createConnection({
   host     : 'localhost',
   user     : 'sqluser',
   password : 'ufo789',
   database : 'project',
 });
-
-connection.connect();
-
-connection.query('SELECT * FROM testi', function(err, rows, fields) {
-  if (err) throw err;
-
-for (var i=0; i<rows.length; i++) {
-  console.log('testituloste: ', rows[i].testi);
-  }
-});
-
-connection.end();
-
 
 // complete POST actions and
 // modify JSON data to be passed to front-end according to POST data
@@ -73,10 +60,6 @@ app.configure(function(){
 	var data = {};
 	var content = {};
 	
-	io.sockets.on('connection', function(socket) {
-		socket.emit('news', { msg: 'Welcome'});
-	});
-	
 	// Handle post requests
 	app.post('/', function(req, res) {
 		app.handlePostQueries(req.body, data);
@@ -112,11 +95,9 @@ app.configure(function(){
 									content: content.content});
 	});
 	
-	//app.use("/sockettesti.html", express.static(__dirname + '/sockettesti.html'));
 	app.use("/", express.static(__dirname));
-	//app.use("/socket.io", express.static(__dirname) + '/socket.io');
 
-	// serve images directly
+	// serve images and css file directly
 	app.use("/images", express.static(__dirname + '/images'));
 	app.use("/app", express.static(__dirname + '/app'));
 	// serve front-end js directly
