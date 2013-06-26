@@ -2,7 +2,7 @@ var PORT = 81;
 var express		= require('express');
 var querystring	= require('querystring');
 var mysql		= require('mysql');
-var registering	= require('modules/registering');
+var registering	= require('./modules/registering');
 
 var app = express(),
 http = require('http'),
@@ -28,7 +28,10 @@ var connection = mysql.createConnection({
 // complete POST actions and
 // modify JSON data to be passed to front-end according to POST data
 app.handlePostQueries = function(postdata, data){
-
+	if(typeof postdata.register != "undefined") {
+		
+		//registering.handleRegisterPost(req.body, data);
+	}
 }
 
 // Detects any page in the templates folder
@@ -64,6 +67,7 @@ app.configure(function(){
 	app.post('/', function(req, res) {
 		app.handlePostQueries(req.body, data);
 	});
+	
 	// Receive ajax post requests
 	app.post('/ajax', function(req, res) {
 		app.handlePostQueries(req.body, data);
