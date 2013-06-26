@@ -31,15 +31,15 @@ $(function() {
 	updateLinks();
 	var search = window.location.search;
 	var hash = window.location.hash.substring(1);
-	if (search.length != 0) {
+	if (hash.length != 0) {
+			buildPage(hash);
+	} else if (search.length != 0) {
 		if (search.substr(1) in pages) {
 			if (typeof pages[search.substr(1)].init == 'function') {
 				pages[search.substr(1)].init();
 			}
 			currentPage = search.substr(1);
 		}
-	} else if (hash.length != 0) {
-			buildPage(hash);
 	} else {
 		currentPage = "index";
 		pages["index"].init();
@@ -49,7 +49,7 @@ $(function() {
 });
 
 // load a page
-function buildPage(event, page) {
+function buildPage(page) {
 	if (page in pages) {
 		if (firstInit == false) {
 			if (typeof pages[currentPage].clean == 'function') { 
