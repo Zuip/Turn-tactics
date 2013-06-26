@@ -1,7 +1,8 @@
 var PORT = 81;
-var express = require('express');
-var querystring = require('querystring');
-var mysql      = require('mysql');
+var express		= require('express');
+var querystring	= require('querystring');
+var mysql		= require('mysql');
+var registering	= require('modules/registering');
 
 var app = express(),
 http = require('http'),
@@ -13,8 +14,7 @@ app.set('views', __dirname);
 app.use(express.bodyParser());
 
 // load languages
-var languages = { en: require('./app/language/en.js')
-				};		
+var languages = { en: require('./app/language/en.js') };		
 var language = "en";
 
 // These can be changed later

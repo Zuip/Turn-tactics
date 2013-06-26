@@ -34,6 +34,15 @@ body {
 	margin-right: 15px;
 }
 
+a {
+	color: #3366FF;
+	text-decoration: none;
+}
+
+a:hover {
+	color: #FF9933;
+}
+
 h1 {
 	font-family: Arial;
 	text-shadow: 2px 2px 1px #000;

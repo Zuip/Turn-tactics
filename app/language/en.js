@@ -8,8 +8,12 @@ var messages = {
 	index: "Index",
 	editor: "Editor",
 	login: "Login",
+	register: "Register",
 	logout: "Logout",
 	username: "Username",
-	password: "Password"
+	password: "Password",
+	repeat_password: "Repeat password",
+	dont_have_user_yet: "Don't have user yet?",
+	register_here: "Register here!"
 };
 exports.messages = messages;

@@ -1,4 +1,4 @@
-<h3><%= messages.register %></h3>
+<h3><%= messages.login %></h3>
 <form>
 	<p><b><%= messages.username %>:</b><br />
 	<input type="text" name="uname"><br />
@@ -7,4 +7,4 @@
 	<input type="submit" value="<%= messages.login %>">
 </form>
 
-<p>Don't have user yet? <a onclick="buildPage(event, 'register')" href="?register"  class="inner_link">Register here</a>
+<p><%= messages.dont_have_user_yet %> <a onclick="buildPage('register')" href="?register"  class="inner_link"><%= messages.register_here %></a>
