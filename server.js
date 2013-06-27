@@ -3,12 +3,12 @@ var express		= require('express');
 var querystring	= require('querystring');
 var mysql		= require('mysql');
 var registering	= require('./modules/registering');
+var fs 			= require('fs');
 
 var app = express(),
 http = require('http'),
 server = http.createServer(app),
 io = require('socket.io').listen(server);
-var fs = require('fs');
 app.set('view engine', 'ejs')
 app.set('views', __dirname);
 app.use(express.bodyParser());
@@ -29,11 +29,11 @@ var connection = mysql.createConnection({
 // modify JSON data to be passed to front-end according to POST data
 app.handlePostQueries = function(postdata, data){
 	if(typeof postdata.register != "undefined") {
-		
 		//registering.handleRegisterPost(req.body, data);
 	}
 }
 
+// Returns the name of the page to be served.
 // Detects any page in the templates folder
 app.getPage = function(query) {
 
@@ -49,23 +49,35 @@ app.getPage = function(query) {
 	return page;
 }
 
-app.getPageContent = function(page, data, content) {
+app.renderPage = function(res, page, data) {
 
+	var content = {};
+	//TODO: get page related data
 	app.render('./app/templates/' + page + ".ejs", data, function(err, html) {
 		content.content = html;
+		res.render('views/index', {language: language, login: false, 
+									messages: languages.en.messages,
+									content: content.content});
 	});
+}
+
+// sends a response to the user
+app.sendPage = function(req, res, data) {
+	var page = app.getPage(req.query);
+	data.messages = languages.en.messages;
+	app.renderPage(res, page, data);
 }
 
 // Http
 app.configure(function(){
 	
-	// Data containers
+	// Data container
 	var data = {};
-	var content = {};
 	
 	// Handle post requests
 	app.post('/', function(req, res) {
 		app.handlePostQueries(req.body, data);
+		app.sendPage(req, res, data);
 	});
 	
 	// Receive ajax post requests
@@ -83,23 +95,11 @@ app.configure(function(){
 	
 	// Serve the layout and the page
 	app.get('/', function(req, res){
-		var page = app.getPage(req.query);
-		data.messages = languages.en.messages;
-		app.getPageContent(page, data, content);
-		res.render('views/index', {language: language, login: false, 
-									messages: languages.en.messages, 
-									content: content.content});
+		app.sendPage(req, res, data);
 	});
 	app.get('/index', function(req, res) {
-		var page = app.getPage(req.query);
-		data.messages = languages.en.messages;
-		app.getPageContent(page, data, content);				
-		res.render('views/index', {language: language, login: false, 
-									messages: languages.en.messages,
-									content: content.content});
+		app.sendPage(req, res, data);
 	});
-	
-	app.use("/", express.static(__dirname));
 
 	// serve images and css file directly
 	app.use("/images", express.static(__dirname + '/images'));
@@ -116,6 +116,5 @@ app.configure(function(){
 		res.render('views/404', { url: req.url });
 	});
 
-	
 });
 server.listen(PORT);
