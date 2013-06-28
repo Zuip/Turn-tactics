@@ -35,17 +35,16 @@ app.handlePostQueries = function(postdata, data){
 
 // Returns the name of the page to be served.
 // Detects any page in the templates folder
-app.getPage = function(query) {
+app.getPage = function(params) {
 
 	var page = "index";
-	var string = querystring.stringify(query, ';', ':');
+	var string = params.id;
 	
-	if(string != "" && string.match(/[a-zA-Z0-9]+:/) ) { 
-		if (fs.existsSync("app/templates/"+string.substr(0, string.length-1)+".ejs") == true) {
-			page = string.substr(0, string.length-1);
+	if(typeof string != "undefined" && string.match(/[a-zA-Z0-9]+/) ) { 
+		if (fs.existsSync("app/templates/"+string+".ejs") == true) {
+			page = string;
 		}
 	}
-
 	return page;
 }
 
@@ -63,7 +62,7 @@ app.renderPage = function(res, page, data) {
 
 // sends a response to the user
 app.sendPage = function(req, res, data) {
-	var page = app.getPage(req.query);
+	var page = app.getPage(req.params);
 	data.messages = languages.en.messages;
 	app.renderPage(res, page, data);
 }
@@ -97,7 +96,7 @@ app.configure(function(){
 	app.get('/', function(req, res){
 		app.sendPage(req, res, data);
 	});
-	app.get('/index', function(req, res) {
+	app.get('/:id', function(req, res){
 		app.sendPage(req, res, data);
 	});
 

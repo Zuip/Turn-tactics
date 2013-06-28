@@ -5,6 +5,8 @@
 <link rel="stylesheet" type="text/css" href="app/style.css">
 <script src="app/js/jquery-2.0.2.js"></script>
 <script src="app/js/ejs.js"></script>
+<script src="app/js/history.adapter.jquery.js"></script>
+<script src="app/js/history.js"></script>
 
 <script src="app/controllers/index.js"></script>
 <script src="app/controllers/editor.js"></script>
@@ -22,15 +24,15 @@
 			<h1><%= messages.browsergame %></h1>
 		</div>
 		<div id="login">
-			<h5><a href="?login" class="inner_link"><%= messages.login %></a></h5>
+			<h5><a href="login" class="inner_link"><%= messages.login %></a></h5>
 		</div>
 	</div>
 	<div id="container">
 		<div id="navigation">
 			<h2><%= messages.navigation %></h2>
 			<ul>
-				<li><a href="?index" class="inner_link"><%= messages.index %></a></li>
-				<li><a href="?editor"  class="inner_link"><%= messages.editor %></a></li><% if (login) { %>
+				<li><a href="index" class="inner_link"><%= messages.index %></a></li>
+				<li><a href="editor"  class="inner_link"><%= messages.editor %></a></li><% if (login) { %>
 				<!--<li><a onclick="buildPage('logout')" href="?logout" class="inner_link"><%= messages.logout %></a></li>-->
 				<% } else { %>
 				<!--<li><a onclick="buildPage('login')" href="?login" class="inner_link"><%= messages.login %></a></li>-->
