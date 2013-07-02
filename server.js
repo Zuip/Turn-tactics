@@ -4,6 +4,7 @@ var querystring	= require('querystring');
 var mysql		= require('mysql');
 var registering	= require('./modules/registering');
 var fs 			= require('fs');
+var path		= require('path');
 
 var app = express(),
 http = require('http'),
@@ -12,6 +13,9 @@ io = require('socket.io').listen(server);
 app.set('view engine', 'ejs')
 app.set('views', __dirname);
 app.use(express.bodyParser());
+
+// http url path
+var APP_PATH = "/test";
 
 // load languages
 var languages = { en: require('./app/language/en.js') };		
@@ -54,7 +58,8 @@ app.renderPage = function(res, page, data) {
 	//TODO: get page related data
 	app.render('./app/templates/' + page + ".ejs", data, function(err, html) {
 		content.content = html;
-		res.render('views/index', {language: language, login: false, 
+		res.render('views/index', {APP_PATH: APP_PATH,
+									language: language, login: false, 
 									messages: languages.en.messages,
 									content: content.content});
 	});
@@ -74,18 +79,18 @@ app.configure(function(){
 	var data = {};
 	
 	// Handle post requests
-	app.post('/', function(req, res) {
+	app.post(APP_PATH+'/', function(req, res) {
 		app.handlePostQueries(req.body, data);
 		app.sendPage(req, res, data);
 	});
 	
 	// Receive ajax post requests
-	app.post('/ajax', function(req, res) {
+	app.post(APP_PATH+'/ajax', function(req, res) {
 		app.handlePostQueries(req.body, data);
 		res.send(JSON.stringify(data));
 	});
 	// Respond to ajax queries
-	app.get('/ajax', function(req, res){
+	app.get(APP_PATH+'/ajax', function(req, res){
 		if (req.xhr) { // test if ajax call
 			app.handlePostQueries(req.body, data);
 			res.send(JSON.stringify(data));
@@ -93,22 +98,21 @@ app.configure(function(){
 	});
 	
 	// Serve the layout and the page
-	app.get('/', function(req, res){
+	app.get(APP_PATH+'/', function(req, res){
 		app.sendPage(req, res, data);
 	});
-	app.get('/:id', function(req, res){
+	app.get(APP_PATH+'/:id', function(req, res){
 		app.sendPage(req, res, data);
 	});
-
 	// serve images and css file directly
-	app.use("/images", express.static(__dirname + '/images'));
-	app.use("/app", express.static(__dirname + '/app'));
+	app.use(APP_PATH+"/images", express.static(__dirname + '/images'));
+	app.use(APP_PATH+"/app", express.static(__dirname + '/app'));
 	// serve front-end js directly
-	app.use("/app/js", express.static(__dirname + '/app/js'));
+	app.use(APP_PATH+"/app/js", express.static(__dirname + '/app/js'));
 	// serve controllers directly
-	app.use("/app/controllers", express.static(__dirname + '/app/controllers'));
+	app.use(APP_PATH+"/app/controllers", express.static(__dirname + '/app/controllers'));
 	// serve view directly
-	app.use("/app/views", express.static(__dirname + '/app/views'));
+	app.use(APP_PATH+"/app/views", express.static(__dirname + '/app/views'));
 	
 	//None of the other rules applied
 	app.use(function(req, res, next) {
