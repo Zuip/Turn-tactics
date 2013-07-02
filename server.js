@@ -35,10 +35,10 @@ var pool = mysql.createPool({
 app.handlePostQueries = function(req, res, data){
 	if(typeof req.body.register != "undefined") {
 		console.log('rekisterointi');
-		sessions.handleRegisterPost(req, res, data, pool);
+		sessions.handleRegisterPost(app, req, res, data, pool);
 	} else if(typeof req.body.login != "undefined") {
 		console.log('kirjautuminen');
-		sessions.handleLoginPost(req, res, data, pool);
+		sessions.handleLoginPost(app, req, res, data, pool);
 	}
 }
 
@@ -88,19 +88,16 @@ app.configure(function(){
 	// Handle post requests
 	app.post(APP_PATH+'/', function(req, res) {
 		app.handlePostQueries(req, res, data);
-		app.sendPage(req, res, data);
 	});
 	
 	// Handle post requests
 	app.post(APP_PATH+'/register', function(req, res) {
 		app.handlePostQueries(req, res, data);
-		app.sendPage(req, res, data);
 	});
 	
 	// Handle post requests
 	app.post(APP_PATH+'/login', function(req, res) {
 		app.handlePostQueries(req, res, data);
-		app.sendPage(req, res, data);
 	});
 	
 	// Receive ajax post requests

@@ -39,42 +39,50 @@ function generateRandomString(length) {
 var succeeded = false;
 
 // Check password and if it is ok, update sessionID.
-function checkPassword(req, res, data, connection, sessionid) {
+function checkPassword(app, req, res, data, connection) {
 	succeed = false;
 	hash = crypto.createHmac('sha1', key).update(req.body.pword).digest('hex');
 	connection.query('SELECT password AS password FROM users WHERE user = \'' + req.body.uname + '\'',
 		function(err, rows, fields) {
-			if (err) throw err; 
-			var password = rows[0].password.toString('hex');
-			console.log(password);
+			if (err) throw err;
 			
-			if(password == hash) {
-				updateSessionID(req, res, data, connection, sessionid);
+			if (typeof rows[0] != "undefined") {
+				var password = rows[0].password.toString('hex');
+				
+				if(password == hash) {
+					updateSessionID(app, req, res, data, connection);
+				}
+			} else {
+				//user not found
+				app.sendPage(req, res, data);
 			}
 		});
 }
 
 // Update session ID to new one.
-function updateSessionID(req, res, data, connection, sessionid) {
-	console.log('ooo');
+function updateSessionID(app, req, res, data, connection) {
+	var sessionid = generateRandomString(25);
 	connection.query('UPDATE users SET sessionid = \''
 		+ sessionid + '\' WHERE user = \'' + req.body.uname + '\'',
-		function(err, rows, fields) { if (err) throw err; });
+		function(err, rows, fields) { 
+			if (err) throw err;
+			res.cookie('player', req.body.uname, { maxAge: 900000, httpOnly: false});
+			res.cookie('session', sessionid, { maxAge: 900000, httpOnly: false});
+			app.sendPage(req, res, data);
+		});
 }
 
 // Handle login post
-exports.handleLoginPost = function(req, res, data, pool) {
-	var sessionid = generateRandomString(25);
-	res.cookie('player', req.body.uname, { maxAge: 900000, httpOnly: false});
-	res.cookie('session', sessionid, { maxAge: 900000, httpOnly: false});
+exports.handleLoginPost = function(app, req, res, data, pool) {
 
 	pool.getConnection(function(err, connection) {
-		checkPassword(req, res, data, connection, sessionid);
+		if (err) throw err;
+		checkPassword(app, req, res, data, connection);
 	});
 }
 
 // Handle registering post
-exports.handleRegisterPost = function(req, res, data, pool) {
+exports.handleRegisterPost = function(app, req, res, data, pool) {
 	
 	// Add session cookies
 	var sessionid = generateRandomString(25);
@@ -93,12 +101,15 @@ exports.handleRegisterPost = function(req, res, data, pool) {
 				+ req.connection.remoteAddress + '\', \''
 				+ getDateTime() + '\', \''
 				+ sessionid + '\')',
-				function(err, rows, fields) { if (err) throw err; });
+				function(err, rows, fields) { 
+					if (err) throw err; 
+					app.sendPage(req, res, data);
+				});
 		
 			//cookieParser();
 			//console.log(req.cookies.player);
 		});
 	} else {
-		console.log('eri salasanat');
+		// different passwords
 	}
 }
