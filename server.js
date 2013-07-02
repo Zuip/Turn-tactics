@@ -59,7 +59,9 @@ app.renderPage = function(res, page, data) {
 
 	var content = {};
 	//TODO: get page related data
-	app.render('./app/templates/' + page + ".ejs", data, function(err, html) {
+	
+	var indexContent = { messages: languages[language].messages };
+	app.render('./app/templates/' + page + ".ejs", indexContent, function(err, html) {
 		content.content = html;
 		res.render('views/index', {APP_PATH: APP_PATH,
 									language: language, login: false, 
@@ -71,7 +73,6 @@ app.renderPage = function(res, page, data) {
 // sends a response to the user
 app.sendPage = function(req, res, data) {
 	var page = app.getPage(req.params);
-	data.messages = languages.en.messages;
 	app.renderPage(res, page, data);
 }
 
