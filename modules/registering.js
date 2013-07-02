@@ -22,18 +22,24 @@ function getDateTime() {
 // complete POST actions and
 // modify JSON data to be passed to front-end according to POST data
 exports.handleRegisterPost = function(req, data, connection){
-	console.log('kasitellaan rekisterointi');
+	
+	// This is better than nothing, the key must be changed when the game is really used.
+	var crypto = require('crypto');
+	var key = 'jokuavain';
+	var hash;
+	
 	if(req.body.pword == req.body.repword) {
-		console.log('samat salasanat, otetaan yhteys tietokantaan');
 		connection.connect();
+
+		hash = crypto.createHmac('sha1', key).update(req.body.pword).digest('hex');
 
 		// Add user to SQL-database
 		connection.query('INSERT INTO users VALUES (\''
 			+ req.body.uname
-			+ '\', \'' + req.body.pword + '\', \''
+			+ '\', UNHEX(\'' + hash + '\'), \''
 			+ req.connection.remoteAddress + '\', \''
 			+ getDateTime() + '\');',
-			function(err, rows, fields) { console.log('suoritettiin sql-kysely'); if (err) throw err; });
+			function(err, rows, fields) { if (err) throw err; });
 			
 		connection.end();
 	} else {

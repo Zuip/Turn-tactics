@@ -80,9 +80,17 @@ app.configure(function(){
 	
 	// Data container
 	var data = {};
+	data.regSuc = 'false';
 	
 	// Handle post requests
 	app.post(APP_PATH+'/', function(req, res) {
+		app.handlePostQueries(req, data);
+		app.sendPage(req, res, data);
+	});
+	
+	// Handle post requests
+	app.post(APP_PATH+'/register', function(req, res) {
+		data.regSuc = 'success';
 		app.handlePostQueries(req, data);
 		app.sendPage(req, res, data);
 	});

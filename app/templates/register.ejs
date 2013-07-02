@@ -1,10 +1,13 @@
 <h3><%= messages.register %></h3>
-<form action="." method="post">
+<%
+
+%>
+<form action="register" method="post">
 	<p><b><%= messages.username %>:</b><br />
 	<input type="text" name="uname"><br />
 	<b><%= messages.password %>:</b><br />
-	<input type="text" name="pword"><br />
+	<input type="password" name="pword"><br />
 	<b><%= messages.repeat_password %>:</b><br />
-	<input type="text" name="repword"><br /><br />
+	<input type="password" name="repword"><br /><br />
 	<input type="submit" name="register" value="<%= messages.register %>">
 </form>
