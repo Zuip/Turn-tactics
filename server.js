@@ -2,7 +2,7 @@ var PORT = 81;
 var express		= require('express');
 var querystring	= require('querystring');
 var mysql		= require('mysql');
-var registering	= require('./modules/registering');
+var sessions	= require('./modules/sessions');
 var fs 			= require('fs');
 var path		= require('path');
 
@@ -13,6 +13,7 @@ io = require('socket.io').listen(server);
 app.set('view engine', 'ejs')
 app.set('views', __dirname);
 app.use(express.bodyParser());
+app.use(express.cookieParser());
 
 // http url path
 var APP_PATH = "";
@@ -22,7 +23,7 @@ var languages = { en: require('./app/language/en.js') };
 var language = "en";
 
 // These can be changed later
-var connection = mysql.createConnection({
+var pool = mysql.createPool({
   host     : 'localhost',
   user     : 'sqluser',
   password : 'ufo789',
@@ -31,12 +32,13 @@ var connection = mysql.createConnection({
 
 // complete POST actions and
 // modify JSON data to be passed to front-end according to POST data
-app.handlePostQueries = function(req, data){
+app.handlePostQueries = function(req, res, data){
 	if(typeof req.body.register != "undefined") {
 		console.log('rekisterointi');
-		registering.handleRegisterPost(req, data, connection);
+		sessions.handleRegisterPost(req, res, data, pool);
 	} else if(typeof req.body.login != "undefined") {
 		console.log('kirjautuminen');
+		sessions.handleLoginPost(req, res, data, pool);
 	}
 }
 
@@ -85,26 +87,31 @@ app.configure(function(){
 	
 	// Handle post requests
 	app.post(APP_PATH+'/', function(req, res) {
-		app.handlePostQueries(req, data);
+		app.handlePostQueries(req, res, data);
 		app.sendPage(req, res, data);
 	});
 	
 	// Handle post requests
 	app.post(APP_PATH+'/register', function(req, res) {
-		data.regSuc = 'success';
-		app.handlePostQueries(req, data);
+		app.handlePostQueries(req, res, data);
+		app.sendPage(req, res, data);
+	});
+	
+	// Handle post requests
+	app.post(APP_PATH+'/login', function(req, res) {
+		app.handlePostQueries(req, res, data);
 		app.sendPage(req, res, data);
 	});
 	
 	// Receive ajax post requests
 	app.post(APP_PATH+'/ajax', function(req, res) {
-		app.handlePostQueries(req, data);
+		app.handlePostQueries(req, res, data);
 		res.send(JSON.stringify(data));
 	});
 	// Respond to ajax queries
 	app.get(APP_PATH+'/ajax', function(req, res){
 		if (req.xhr) { // test if ajax call
-			app.handlePostQueries(req, data);
+			app.handlePostQueries(req, res, data);
 			res.send(JSON.stringify(data));
 		}
 	});

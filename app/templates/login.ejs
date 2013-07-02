@@ -7,4 +7,6 @@
 	<input type="submit" name="login" value="<%= messages.login %>">
 </form>
 
+<% if(false) { res.cookie('rememberme', 'yes', { maxAge: 900000, httpOnly: false}); } %>
+
 <p><%= messages.dont_have_user_yet %> <a href="register" class="inner_link"><%= messages.register_here %></a>
