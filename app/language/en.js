@@ -14,6 +14,8 @@ var messages = {
 	password: "Password",
 	repeat_password: "Repeat password",
 	dont_have_user_yet: "Don't have user yet?",
-	register_here: "Register here!"
+	register_here: "Register here!",
+	chat: "Chat",
+	chatloading: "Loading.."
 };
 exports.messages = messages;

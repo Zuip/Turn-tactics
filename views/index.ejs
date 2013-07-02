@@ -2,19 +2,22 @@
 <head>
 <title>jotain</title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<link rel="stylesheet" type="text/css" href="app/style.css">
-<script src="app/js/jquery-2.0.2.js"></script>
-<script src="app/js/ejs.js"></script>
-<script src="app/js/history.adapter.jquery.js"></script>
-<script src="app/js/history.js"></script>
+<link rel="stylesheet" type="text/css" href="<%- APP_PATH %>/app/style.css">
+<script type="text/javascript">
+	var APP_PATH = '<%- APP_PATH %>';
+</script>
+<script src="<%- APP_PATH %>/app/js/jquery-2.0.2.js"></script>
+<script src="<%- APP_PATH %>/app/js/ejs.js"></script>
+<script src="<%- APP_PATH %>/app/js/history.adapter.jquery.js"></script>
+<script src="<%- APP_PATH %>/app/js/history.js"></script>
 
-<script src="app/controllers/index.js"></script>
-<script src="app/controllers/editor.js"></script>
-<script src="app/controllers/login.js"></script>
-<script src="app/controllers/register.js"></script>
+<script src="<%- APP_PATH %>/app/controllers/index.js"></script>
+<script src="<%- APP_PATH %>/app/controllers/editor.js"></script>
+<script src="<%- APP_PATH %>/app/controllers/login.js"></script>
+<script src="<%- APP_PATH %>/app/controllers/register.js"></script>
 
-<script src="app/js/template.js"></script>
-<script src="app/language/<%- language %>.js"></script>
+<script src="<%- APP_PATH %>/app/js/template.js"></script>
+<script src="<%- APP_PATH %>/app/language/<%- language %>.js"></script>
 </head>
 <body>
 

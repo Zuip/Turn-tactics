@@ -5,7 +5,7 @@ pages["index"].getData = function() {
 	return {};
 };
 
-pages["index"].init = function() {
+pages["index"].init = function(pathname) {
 
 };
 

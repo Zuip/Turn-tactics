@@ -5,7 +5,7 @@ pages["editor"].getData = function() {
 	return {};
 };
 
-pages["editor"].init = function() {
+pages["editor"].init = function(pathname) {
 
 };
 

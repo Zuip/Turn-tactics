@@ -6,12 +6,12 @@ var History = window.History;
 
 // Precompile
 for (var page in pages) {
-	templates[page] = new EJS({url: './app/templates/' + page});
+	templates[page] = new EJS({url: APP_PATH+'/app/templates/' + page});
 }
 
 function loadFile(page) {
 	$.ajax({
-        url: './app/templates/'+page+'.js',
+        url: APP_PATH+'/app/templates/'+page+'.js',
             cache: true,
             success: function(data) {
 				callback(page, data);
@@ -25,7 +25,7 @@ function updateLinks() {
 		$("a.inner_link").unbind('click');
 		$("a.inner_link").on("click", function(event){
 			event.preventDefault();
-			History.pushState({page: $(this).attr('href')}, document.title, $(this).attr('href'));
+			History.pushState({page: $(this).attr('href')}, document.title, APP_PATH+"/"+$(this).attr('href'));
 		});
 	} else {
 		// Fallback. No history
@@ -55,16 +55,20 @@ $(function() {
 	
 	updateLinks();
 
-	var search = window.location.search;
-	if (search.length != 0) {
-		if (search.substr(1) in pages) {
-			if (typeof pages[search.substr(1)].init == 'function') {
-				pages[search.substr(1)].init();
+	var path = window.location.pathname;
+	var realPath = path.substring(APP_PATH.length+1);
+	var parts = realPath.split("/");
+	var dir = parts[0];
+	
+	if (dir != 0) {
+		if (dir in pages) {
+			if (typeof pages[dir].init == 'function') {
+				pages[dir].init();
 			}
-			currentPage = search.substr(1);
+			currentPage = dir;
 		}
 		if (History.enabled) {
-			History.replaceState({page: currentPage}, document.title, currentPage);
+			History.replaceState({page: currentPage}, document.title, APP_PATH+"/"+realPath);
 		}
 	} else {
 		currentPage = "index";
@@ -74,6 +78,7 @@ $(function() {
 			History.replaceState({page: "index"}, document.title, "");
 		}
 	}
+	pages[currentPage].init();
 	firstInit = false;
 	
 });
@@ -93,7 +98,7 @@ function setPageContent(page) {
 	}
 	var data = {};
 	if (typeof(pages[page].getData) == typeof(Function)) {
-		data = pages[page].getData();
+		data = pages[page].getData(window.location.pathname);
 	}
 	var view = templates[page].render(data);
 	$("#main").html(view);
