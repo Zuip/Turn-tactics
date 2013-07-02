@@ -60,7 +60,7 @@ $(function() {
 	var parts = realPath.split("/");
 	var dir = parts[0];
 	
-	if (dir != 0) {
+	if (dir != "") {
 		if (dir in pages) {
 			if (typeof pages[dir].init == 'function') {
 				pages[dir].init();
@@ -72,13 +72,17 @@ $(function() {
 		}
 	} else {
 		currentPage = "index";
-		pages["index"].init();
+		if (typeof pages[currentPage].init == 'function') {
+			pages[currentPage].init();
+		}
 		// if user had no page set, leave it that way in browser url bar
 		if (History.enabled) {
 			History.replaceState({page: "index"}, document.title, "");
 		}
 	}
-	pages[currentPage].init();
+	if (typeof pages[currentPage].init == 'function') {
+		pages[currentPage].init();
+	}
 	firstInit = false;
 	
 });
