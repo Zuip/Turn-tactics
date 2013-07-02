@@ -62,13 +62,10 @@ $(function() {
 	
 	if (dir != "") {
 		if (dir in pages) {
-			if (typeof pages[dir].init == 'function') {
-				pages[dir].init();
-			}
 			currentPage = dir;
-		}
-		if (History.enabled) {
-			History.replaceState({page: currentPage}, document.title, APP_PATH+"/"+realPath);
+			if (History.enabled) {
+				History.replaceState({page: currentPage}, document.title, APP_PATH+"/"+realPath);
+			}
 		}
 	} else {
 		currentPage = "index";
