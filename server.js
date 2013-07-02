@@ -15,7 +15,7 @@ app.set('views', __dirname);
 app.use(express.bodyParser());
 
 // http url path
-var APP_PATH = "/test";
+var APP_PATH = "";
 
 // load languages
 var languages = { en: require('./app/language/en.js') };		
@@ -31,9 +31,12 @@ var connection = mysql.createConnection({
 
 // complete POST actions and
 // modify JSON data to be passed to front-end according to POST data
-app.handlePostQueries = function(postdata, data){
-	if(typeof postdata.register != "undefined") {
-		//registering.handleRegisterPost(req.body, data);
+app.handlePostQueries = function(req, data){
+	if(typeof req.body.register != "undefined") {
+		console.log('rekisterointi');
+		registering.handleRegisterPost(req, data, connection);
+	} else if(typeof req.body.login != "undefined") {
+		console.log('kirjautuminen');
 	}
 }
 
@@ -80,19 +83,19 @@ app.configure(function(){
 	
 	// Handle post requests
 	app.post(APP_PATH+'/', function(req, res) {
-		app.handlePostQueries(req.body, data);
+		app.handlePostQueries(req, data);
 		app.sendPage(req, res, data);
 	});
 	
 	// Receive ajax post requests
 	app.post(APP_PATH+'/ajax', function(req, res) {
-		app.handlePostQueries(req.body, data);
+		app.handlePostQueries(req, data);
 		res.send(JSON.stringify(data));
 	});
 	// Respond to ajax queries
 	app.get(APP_PATH+'/ajax', function(req, res){
 		if (req.xhr) { // test if ajax call
-			app.handlePostQueries(req.body, data);
+			app.handlePostQueries(req, data);
 			res.send(JSON.stringify(data));
 		}
 	});
