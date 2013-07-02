@@ -1,10 +1,10 @@
 <h3><%= messages.login %></h3>
-<form>
+<form action="." method="post">
 	<p><b><%= messages.username %>:</b><br />
 	<input type="text" name="uname"><br />
 	<b><%= messages.password %>:</b><br />
 	<input type="text" name="pword"><br /><br />
-	<input type="submit" value="<%= messages.login %>">
+	<input type="submit" name="login" value="<%= messages.login %>">
 </form>
 
 <p><%= messages.dont_have_user_yet %> <a href="register" class="inner_link"><%= messages.register_here %></a>
