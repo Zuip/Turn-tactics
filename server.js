@@ -9,8 +9,7 @@ var path		= require('path');
 var app = express(),
 http = require('http'),
 server = http.createServer(app),
-io = require('socket.io').listen(server),
-chat = require('./modules/chat')(io);
+io = require('socket.io').listen(server);
 
 app.set('view engine', 'ejs')
 app.set('views', __dirname);
@@ -33,6 +32,8 @@ var pool = mysql.createPool({
   password : 'ufo789',
   database : 'project',
 });
+
+chat = require('./modules/chat')(io, pool);
 
 // complete POST actions and
 // modify JSON data to be passed to front-end according to POST data

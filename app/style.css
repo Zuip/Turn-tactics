@@ -187,7 +187,8 @@ h5 a:hover {
 	margin-right: -1px;
 	padding: 0;
 	width: 60%;
-	min-height: 100px;
+	height: 200px;
+	overflow: auto;
 }
 
 #userList {
@@ -195,7 +196,8 @@ h5 a:hover {
 	padding: 0;
 	margin: 0;
 	width: 40%;
-	min-height: 100px;
+	height: 200px;
+	overflow: auto;
 }
 
 #chatInput {

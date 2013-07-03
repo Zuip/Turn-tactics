@@ -19,12 +19,25 @@ chat = {
 		this.socket.on('connect', function(){
 			self.chatInputText.attr("disabled", false);
 			self.connected = true;
+			self.joinChannel("main");
+		});
+		
+		this.socket.on('error', function() {
+			self.addMessage(self.currentChannel, "", "Login to enter chat");
+			self.updateMessageList(self.currentChannel);
 		});
 	
 		this.socket.on('messageDelivered', function(channel){
 			self.messages[channel].push({sender: "Me", msg: self.chatInputText.val()});
 			self.chatInputText.val("");
 			self.chatInputText.attr("disabled", false);
+			if (channel == self.currentChannel) {
+				self.updateMessageList(channel);
+			}
+		});
+		
+		this.socket.on('chatMessage', function(channel, user, message) {
+			self.addMessage(channel, user.username, message);
 			if (channel == self.currentChannel) {
 				self.updateMessageList(channel);
 			}
@@ -105,13 +118,34 @@ chat = {
 		text: channel
 		}).appendTo(this.tabs);
 		channelTab.on('click', function() {
-			alert(channel);
+			//todo: changetab
 		});
 		
-		this.changeTab(channel);
+		this.changeTab(channel, false);
 	},
 	
-	changeTab: function(channel, init = false) {
+	addMessage: function(channel, sender, message) {
+		if (typeof this.messages[channel] == "undefined") {
+			this.messages[channel] = new Array();
+		}
+		this.messages[this.currentChannel].push({sender: sender, msg: message});
+	},
+	
+	
+	
+	isScrollOnBottom: function(element) {
+	//alert((element.prop("scrollHeight") - element.scrollTop()) + "#"+ element.height());
+		if (element.prop("scrollHeight") - element.scrollTop() == element.height()) {
+			return true;
+		}
+		return false;
+	},
+	
+	scrollToBottom: function(element) {
+		element.scrollTop(element.prop("scrollHeight"));
+	},
+	
+	changeTab: function(channel, init) {
 		if (channel != this.currentChannel || init == true) {
 			if (this.currentChannel != "") {
 				$("chat-"+this.currentChannel).removeClass("tabSelected");
@@ -124,7 +158,7 @@ chat = {
 	},
 	
 	sendMessage: function() {
-		this.socket.emit('sendMessage', this.chatInputText.attr("value"), this.currentChannel);
+		this.socket.emit('sendMessage', this.currentChannel, this.chatInputText.val());
 		this.chatInputText.attr("disabled", true);
 	},
 	
@@ -140,7 +174,7 @@ chat = {
 				}).appendTo(this.tabs);
 				var channelName = this.channels[i];
 				channelTab.on('click', function() {
-					alert(ChannelName);
+					//todo: changetab
 				});
 			}
 		}
@@ -160,6 +194,9 @@ chat = {
 	},
 	
 	updateMessageList: function(channel) {
+	
+		var onBottom = this.isScrollOnBottom(this.msgWindow);
+		
 		$('#msgWindow').empty();
 		if (typeof this.messages[channel] != 'undefined') {
 			for (var i=0; i<this.messages[channel].length; ++i) {
@@ -167,6 +204,10 @@ chat = {
 				text: this.messages[channel][i].sender+": "+this.messages[channel][i].msg
 				}).appendTo(this.msgWindow);
 			}
+		}
+		
+		if (onBottom == true) {
+			this.scrollToBottom(this.msgWindow);
 		}
 	}
 	

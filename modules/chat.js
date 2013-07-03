@@ -1,4 +1,5 @@
 var usernames = {};
+var cookie = require('cookie');
 
 getUser = function(socket) {
 	var data = {username: socket.username, registered: socket.registered};
@@ -15,21 +16,36 @@ getUserList = function(io, channel) {
 	return userList;
 }
 
-module.exports = function(io) {
+module.exports = function(io, pool) {
+
+	io.set('authorization', function (handshakeData, accept) {
+	
+		if (typeof handshakeData.headers.cookie != "undefined") {
+			handshakeData.cookie = cookie.parse(handshakeData.headers.cookie);
+			if (typeof handshakeData.cookie.session != "undefined") {
+				pool.getConnection(function(err, connection) {
+					if (err) throw err;
+					connection.query('SELECT user FROM users WHERE sessionid = ?', 
+					[handshakeData.cookie.session],
+					function(err, rows, fields) {
+						if (err) throw err;
+						if (typeof rows[0] != "undefined") {
+							handshakeData.username = rows[0].user;
+							return accept(null, true);
+						}
+					});
+					connection.end();
+				});
+			} else {
+				return accept('Not logged in', false);
+			}
+		} else {
+			return accept('Not logged in', false);
+		}
+	});
 
 	io.sockets.on('connection', function(socket) {
-	
-		var loggedIn = false;
-		if (loggedIn) {
-			// if logged in
-			socket.registered = true;
-		} else {
-			// guest, assign username
-			socket.registered = false;
-			// TODO: assign username that isn't in use
-			socket.username = "guest";
-		}
-		
+		socket.username = socket.handshake.username;
 		socket.on('joinChannel', function(channel) {
 			if (true) { // check if user can join this channel
 				socket.join(channel);
@@ -43,11 +59,11 @@ module.exports = function(io) {
 		socket.on('leaveChannel', function(channel) {
 			socket.leave(channel);
 		});
-		socket.on('sendMessage', function(message, channel) {
+		socket.on('sendMessage', function(channel, message) {
 			if (true) { // check if user is on the channel
 				socket.join(channel);
 				socket.emit('messageDelivered', channel);
-				socket.broadcast.to(channel).emit('chatMessage', getUser(socket), message);
+				socket.broadcast.to(channel).emit('chatMessage', channel, getUser(socket), message);
 			} else {
 				// not on channel
 				socket.emit('notOnChannel', { channel: channel });
