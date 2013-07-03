@@ -7,6 +7,7 @@ var messages = {
     welcome: "Welcome",
 	index: "Index",
 	editor: "Editor",
+	game: "Game",
 	login: "Login",
 	register: "Register",
 	logout: "Logout",
