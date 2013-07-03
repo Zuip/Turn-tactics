@@ -98,15 +98,25 @@ function setPageContent(page) {
 		}
 	}
 	var data = {};
-	if (typeof(pages[page].getData) == typeof(Function)) {
-		data = pages[page].getData(window.location.pathname);
+	if (typeof pages[page].load != "undefined") {
+		$.getJSON('ajax/'+page, function(jsondata) {
+			var data = {data: jsondata};
+			completePageChange(page, data);
+		});
+	} else {
+		completePageChange(page, data);
 	}
+
+}
+
+function completePageChange(page, data) {
+
 	var view = templates[page].render(data);
 	$("#main").html(view);
 	if (typeof pages[page].init == 'function') {
 		pages[page].init();
 	}
-	
 	updateLinks();
 	currentPage = page;
+
 }

@@ -86,6 +86,8 @@ exports.handleRegisterPost = function(app, req, res, data, pool) {
 	
 	if(req.body.pword == req.body.repword) {
 		pool.getConnection(function(err, connection) {
+		
+			if (err) throw err;
 
 			hash = crypto.createHmac('sha1', key).update(req.body.pword).digest('hex');
 			
@@ -138,9 +140,9 @@ exports.handleRegisterPost = function(app, req, res, data, pool) {
 }
 
 // Gets username with session ID string
-exports.getUsername = function(req, res, app, pool, data) {
+exports.getUsername = function(req, res, app, pool, data, ajaxdataonly) {
 	var sessionid = req.cookies.session;
-	console.log(req.cookies.session);
+	console.log("ASD "+req.cookies.session);
 	
 	pool.getConnection(function(err, connection) {
 		connection.query('SELECT user FROM users WHERE sessionid = \'' + sessionid + '\'',
@@ -161,8 +163,12 @@ exports.getUsername = function(req, res, app, pool, data) {
 				data.regSuc = 0;
 				data.logSuc = 0;
 			}
-			
-			app.sendPage(req, res, data);
+			if (ajaxdataonly) {
+				res.header("Content-Type", "application/json");
+				res.send(JSON.stringify(data));
+			} else {
+				app.sendPage(req, res, data);
+			}
 		});
 	});
 }

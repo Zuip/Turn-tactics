@@ -110,10 +110,12 @@ app.configure(function(){
 		res.send(JSON.stringify(data));
 	});
 	// Respond to ajax queries
-	app.get(APP_PATH+'/ajax', function(req, res){
+	app.get(APP_PATH+'/ajax/:id', function(req, res){
 		if (req.xhr) { // test if ajax call
-			app.handlePostQueries(req, res, data);
-			res.send(JSON.stringify(data));
+			if (req.params.id == "login" || req.params.id == "register") {
+				//last param tells to send ajax data
+				sessions.getUsername(req, res, app, pool, data, true);
+			}
 		}
 	});
 	
@@ -122,7 +124,8 @@ app.configure(function(){
 		app.sendPage(req, res, data);
 	});
 	app.get(APP_PATH+'/:id', function(req, res){
-		sessions.getUsername(req, res, app, pool, data);
+		// regular page
+		sessions.getUsername(req, res, app, pool, data, false);
 	});
 	// serve images and css file directly
 	app.use(APP_PATH+"/images", express.static(__dirname + '/images'));
