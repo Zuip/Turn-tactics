@@ -60,14 +60,15 @@ app.getPage = function(params) {
 app.renderPage = function(res, page, data) {
 
 	var content = {};
-	//TODO: get page related data
 	
-	var indexContent = { messages: languages[language].messages };
+	var indexContent = { messages: languages[language].messages,
+						data: data };
 	app.render('./app/templates/' + page + ".ejs", indexContent, function(err, html) {
 		content.content = html;
 		res.render('views/index', {APP_PATH: APP_PATH,
 									language: language, login: false, 
 									messages: languages.en.messages,
+									data: data,
 									content: content.content});
 	});
 }
@@ -83,7 +84,6 @@ app.configure(function(){
 	
 	// Data container
 	var data = {};
-	data.regSuc = 'false';
 	
 	// Handle post requests
 	app.post(APP_PATH+'/', function(req, res) {
@@ -118,6 +118,9 @@ app.configure(function(){
 		app.sendPage(req, res, data);
 	});
 	app.get(APP_PATH+'/:id', function(req, res){
+		if (req.params.id == "register") {
+			data.regSuc = false;
+		}
 		app.sendPage(req, res, data);
 	});
 	// serve images and css file directly

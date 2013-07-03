@@ -103,7 +103,8 @@ exports.handleRegisterPost = function(app, req, res, data, pool) {
 				+ sessionid + '\')',
 				function(err, rows, fields) { 
 					if (err) throw err; 
-					app.sendPage(req, res, data);
+					data.regSuc = 1;
+					app.renderPage(res, "register", data);
 				});
 		
 			//cookieParser();
@@ -111,5 +112,7 @@ exports.handleRegisterPost = function(app, req, res, data, pool) {
 		});
 	} else {
 		// different passwords
+		data.regSuc = 2;
+		app.renderPage(res, "register", data);
 	}
 }

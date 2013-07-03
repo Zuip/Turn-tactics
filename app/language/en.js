@@ -16,6 +16,8 @@ var messages = {
 	dont_have_user_yet: "Don't have user yet?",
 	register_here: "Register here!",
 	chat: "Chat",
-	chatloading: "Loading.."
+	chatloading: "Loading..",
+	registerSuccessful: "Registering successful",
+	passwordMismatch: "The passwords didn't match"
 };
 exports.messages = messages;

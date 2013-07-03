@@ -1,5 +1,9 @@
 <h3><%= messages.register %></h3>
-
+<% if (data.regSuc == 1) { %>
+<%= messages.registerSuccessful %>
+<% } else if (data.regSuc == 2) { %>
+<%= messages.passwordMismatch %>
+<% } else { %>
 <form action="register" method="post">
 	<p><b><%= messages.username %>:</b><br />
 	<input type="text" name="uname"><br />
@@ -9,3 +13,4 @@
 	<input type="password" name="repword"><br /><br />
 	<input type="submit" name="register" value="<%= messages.register %>">
 </form>
+<% } %>

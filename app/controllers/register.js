@@ -2,7 +2,9 @@ var pages = pages || {};
 pages["register"] = pages["register"] || {};
 
 pages["register"].getData = function(pathname) {
-	return {};
+	// currently registering can't be done with ajax
+	var data = {loginSuc: 0};
+	return {data: data};
 };
 
 pages["register"].init = function(pathname) {
