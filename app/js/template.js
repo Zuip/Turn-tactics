@@ -1,5 +1,6 @@
 pages = pages || {};
 var templates = new Array;
+var components = new Array;
 var currentPage = 'index';
 var firstInit = true;
 var History = window.History;
@@ -8,6 +9,8 @@ var History = window.History;
 for (var page in pages) {
 	templates[page] = new EJS({url: APP_PATH+'/app/templates/' + page});
 }
+components["logininfo"] = new EJS({url: APP_PATH+'/app/templates/logininfo.ejs'});
+components["navigation"] = new EJS({url: APP_PATH+'/app/templates/navigation.ejs'});
 
 function loadFile(page) {
 	$.ajax({
@@ -92,25 +95,25 @@ function buildPage(page) {
 }
 
 function setPageContent(page) {
+
 	if (firstInit == false) {
 		if (typeof pages[currentPage].clean == 'function') { 
 			pages[currentPage].clean();
 		}
 	}
 	var data = {};
-	if (typeof pages[page].load != "undefined") {
-		$.getJSON('ajax/'+page, function(jsondata) {
+
+	$.getJSON('ajax/'+page, function(jsondata) {
 			var data = {data: jsondata};
 			completePageChange(page, data);
-		});
-	} else {
-		completePageChange(page, data);
-	}
+	});
 
 }
 
 function completePageChange(page, data) {
 
+	$("#login").html(components["logininfo"].render(data));
+	$("#navigation").html(components["navigation"].render(data));
 	var view = templates[page].render(data);
 	$("#main").html(view);
 	if (typeof pages[page].init == 'function') {

@@ -49,6 +49,8 @@ function updateSessionID(app, req, res, data, connection) {
 			if (err) throw err;
 			res.cookie('session', sessionid, { maxAge: 900000, httpOnly: false});
 			data.logSuc = 1;
+			data.login = true;
+			data.username = req.body.uname;
 			app.renderPage(res, "login", data);
 		});
 }
@@ -145,7 +147,8 @@ exports.handleRegisterPost = function(app, req, res, data, pool) {
 // Gets username with session ID string
 exports.getUsername = function(req, res, app, pool, data, ajaxdataonly) {
 	var sessionid = req.cookies.session;
-	console.log("ASD "+req.cookies.session);
+	data.username = "";
+	data.login = false;
 	
 	pool.getConnection(function(err, connection) {
 		if (err) throw err;
@@ -154,6 +157,9 @@ exports.getUsername = function(req, res, app, pool, data, ajaxdataonly) {
 			if (err) throw err;
 			
 			if (typeof rows[0] != "undefined") {
+				data.username = rows[0].user;
+				data.login = true;
+			
 				if (req.params.id == "register") {
 					data.regSuc = 8;
 				}
@@ -162,6 +168,7 @@ exports.getUsername = function(req, res, app, pool, data, ajaxdataonly) {
 				}
 				else if (req.params.id == "logout") {
 					res.clearCookie('session');
+					data.login = false;
 				}
 			} else {
 				data.regSuc = 0;

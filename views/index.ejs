@@ -31,17 +31,12 @@
 			<h1><%= messages.browsergame %></h1>
 		</div>
 		<div id="login">
-			<h5><a href="login" class="inner_link"><%= messages.login %></a></h5>
+			<h5><%- logininfo %></h5>
 		</div>
 	</div>
 	<div id="container">
 		<div id="navigation">
-			<h2><%= messages.navigation %></h2>
-			<ul>
-				<li><a href="index" class="inner_link"><%= messages.index %></a></li>
-				<li><a href="editor"  class="inner_link"><%= messages.editor %></a></li>
-				<li><a href="game"  class="inner_link"><%= messages.game %></a></li>
-			</ul>
+		<%- navigation %>
 		</div>
 		<div id="content">
 			<div id="main">

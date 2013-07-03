@@ -64,16 +64,25 @@ app.getPage = function(params) {
 app.renderPage = function(res, page, data) {
 
 	var content = {};
-	
 	var indexContent = { messages: languages[language].messages,
 						data: data };
-	app.render('./app/templates/' + page + ".ejs", indexContent, function(err, html) {
-		content.content = html;
-		res.render('views/index', {APP_PATH: APP_PATH,
-									language: language, login: false, 
-									messages: languages.en.messages,
-									data: data,
-									content: content.content});
+								
+	app.render('./app/templates/logininfo.ejs', {messages: languages.en.messages, data: data}, function(err, logininfo) {
+	if (err) throw err;
+		app.render('./app/templates/navigation.ejs', {messages: languages.en.messages, data: data}, function(err, navigation) {
+			if (err) throw err;
+			app.render('./app/templates/' + page + ".ejs", indexContent, function(err, html) {
+				if (err) throw err;
+				content.content = html;
+				res.render('views/index', {APP_PATH: APP_PATH,
+											logininfo: logininfo,
+											navigation: navigation,
+											language: language, 
+											messages: languages.en.messages,
+											data: data,
+											content: content.content});
+			});
+		});
 	});
 }
 
@@ -112,10 +121,8 @@ app.configure(function(){
 	// Respond to ajax queries
 	app.get(APP_PATH+'/ajax/:id', function(req, res){
 		if (req.xhr) { // test if ajax call
-			if (req.params.id == "login" || req.params.id == "register") {
-				//last param tells to send ajax data
-				sessions.getUsername(req, res, app, pool, data, true);
-			}
+			//last param tells to send ajax data
+			sessions.getUsername(req, res, app, pool, data, true);
 		}
 	});
 	
