@@ -2,5 +2,6 @@ var pages = pages || {};
 pages["login"] = pages["login"] || {};
 
 pages["login"].getData = function(pathname) {
-	return {};
+	var data = {loginSuc: 0};
+	return {data: data};
 };

@@ -29,6 +29,8 @@ var messages = {
 	userNotFound: "Wrong password or user was not found.",
 	backToLogin: "Back to login.",
 	youAreAlreadyLoggedIn: "You are already logged in.",
-	logOutHere: "Log out here."
+	logOutHere: "Log out here.",
+	logOut: "Log out",
+	youLoggedOut: "You logged out."
 };
 exports.messages = messages;

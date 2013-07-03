@@ -154,7 +154,9 @@ exports.getUsername = function(req, res, app, pool, data) {
 				else if (req.params.id == "login") {
 					data.logSuc = 3;
 				}
-				// rows[0].user.toString('utf-8');
+				else if (req.params.id == "logout") {
+					res.clearCookie('session');
+				}
 			} else {
 				data.regSuc = 0;
 				data.logSuc = 0;
