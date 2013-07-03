@@ -9,7 +9,9 @@ var path		= require('path');
 var app = express(),
 http = require('http'),
 server = http.createServer(app),
-io = require('socket.io').listen(server);
+io = require('socket.io').listen(server),
+chat = require('./modules/chat')(io);
+
 app.set('view engine', 'ejs')
 app.set('views', __dirname);
 app.use(express.bodyParser());
