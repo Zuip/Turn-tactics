@@ -1,0 +1,7 @@
+<h5>
+<% if (data.login == true) { %>
+Logged in as user <%= data.username %>
+<% } else { %>
+<a href="login" class="inner_link"><%= messages.login %></a>
+<% } %>
+</h5>
