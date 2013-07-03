@@ -1,8 +1,20 @@
 <h3><%= messages.register %></h3>
 <% if (data.regSuc == 1) { %>
-<%= messages.registerSuccessful %>
+<p><%= messages.registerSuccessful %>
 <% } else if (data.regSuc == 2) { %>
-<%= messages.passwordMismatch %>
+<p><%= messages.passwordMismatch %>
+<% } else if (data.regSuc == 3) { %>
+<p><%= messages.alreadySameUser %>
+<% } else if (data.regSuc == 4) { %>
+<p><%= messages.tooShortPassword %>
+<% } else if (data.regSuc == 5) { %>
+<p><%= messages.tooLongPassword %>
+<% } else if (data.regSuc == 6) { %>
+<p><%= messages.tooShortUsername %>
+<% } else if (data.regSuc == 7) { %>
+<p><%= messages.tooLongUsername %>
+<% } else if (data.regSuc == 8) { %>
+<p><%= messages.youAreAlreadyLoggedIn %> <a href="logout"><%= messages.logOutHere %></a>
 <% } else { %>
 <form action="register" method="post">
 	<p><b><%= messages.username %>:</b><br />
@@ -13,4 +25,7 @@
 	<input type="password" name="repword"><br /><br />
 	<input type="submit" name="register" value="<%= messages.register %>">
 </form>
+<% } %>
+<% if (data.regSuc > 1 && data.regSuc < 8) { %>
+<br /><p><a href="register"><%= messages.backToRegistering %></a>
 <% } %>

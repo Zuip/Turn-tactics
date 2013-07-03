@@ -3,27 +3,6 @@ var crypto = require('crypto');
 var key = 'jokuavain';
 var hash;
 
-// Function that gives the time in YYYY:MM:DD:HH:MM syntax
-function getDateTime() {
-    var date = new Date();
-
-    var hour = date.getHours();
-    hour = (hour < 10 ? "0" : "") + hour;
-
-    var min  = date.getMinutes();
-    min = (min < 10 ? "0" : "") + min;
-
-    var year = date.getFullYear();
-
-    var month = date.getMonth() + 1;
-    month = (month < 10 ? "0" : "") + month;
-
-    var day  = date.getDate();
-    day = (day < 10 ? "0" : "") + day;
-
-    return year + ":" + month + ":" + day + ":" + hour + ":" + min;
-}
-
 // Generates a random string
 function generateRandomString(length) {
 	var chars = "1234567890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM";
@@ -35,8 +14,6 @@ function generateRandomString(length) {
 	}
 	return word;
 }
-
-var succeeded = false;
 
 // Check password and if it is ok, update sessionID.
 function checkPassword(app, req, res, data, connection) {
@@ -51,10 +28,14 @@ function checkPassword(app, req, res, data, connection) {
 				
 				if(password == hash) {
 					updateSessionID(app, req, res, data, connection);
+				} else {
+					data.logSuc = 2;
+					app.renderPage(res, "login", data);
 				}
 			} else {
 				//user not found
-				app.sendPage(req, res, data);
+				data.logSuc = 2;
+				app.renderPage(res, "login", data);
 			}
 		});
 }
@@ -66,9 +47,9 @@ function updateSessionID(app, req, res, data, connection) {
 		+ sessionid + '\' WHERE user = \'' + req.body.uname + '\'',
 		function(err, rows, fields) { 
 			if (err) throw err;
-			res.cookie('player', req.body.uname, { maxAge: 900000, httpOnly: false});
 			res.cookie('session', sessionid, { maxAge: 900000, httpOnly: false});
-			app.sendPage(req, res, data);
+			data.logSuc = 1;
+			app.renderPage(res, "login", data);
 		});
 }
 
@@ -81,38 +62,105 @@ exports.handleLoginPost = function(app, req, res, data, pool) {
 	});
 }
 
+	// Add user to SQL-database
+function addUser(req, res, data, app, connection) {
+	var sessionid = generateRandomString(25);
+	connection.query('INSERT INTO users (user, password, ip, sessionid) VALUES (\''
+		+ req.body.uname + '\', UNHEX(\''
+		+ hash + '\'), \''
+		+ req.connection.remoteAddress + '\', \''
+		+ sessionid + '\')',
+		function(err, rows, fields) { 
+			if (err) throw err;
+			// Add session cookies
+			res.cookie('session', sessionid, { maxAge: 900000, httpOnly: false});
+			
+			// Adding the user succeeded
+			data.regSuc = 1;
+			app.renderPage(res, "register", data);
+		});
+}
+
 // Handle registering post
 exports.handleRegisterPost = function(app, req, res, data, pool) {
-	
-	// Add session cookies
-	var sessionid = generateRandomString(25);
-	res.cookie('player', req.body.uname, { maxAge: 900000, httpOnly: false});
-	res.cookie('session', sessionid, { maxAge: 900000, httpOnly: false});
 	
 	if(req.body.pword == req.body.repword) {
 		pool.getConnection(function(err, connection) {
 
 			hash = crypto.createHmac('sha1', key).update(req.body.pword).digest('hex');
+			
+			// Check that password is long enough. Short one is good for testing.
+			if(req.body.pword.length < 3) {
+				data.regSuc = 4;
+				app.renderPage(res, "register", data);
+				return;
+			}
+			
+			// Check that password is short enough.
+			if(req.body.pword.length > 20) {
+				data.regSuc = 5;
+				app.renderPage(res, "register", data);
+				return;
+			}
+			
+			// Check that username is long enough.
+			if(req.body.pword.length < 3) {
+				data.regSuc = 6;
+				app.renderPage(res, "register", data);
+				return;
+			}
+			
+			// Check that username is short enough.
+			if(req.body.pword.length > 20) {
+				data.regSuc = 7;
+				app.renderPage(res, "register", data);
+				return;
+			}
 
-			// Add user to SQL-database
-			connection.query('INSERT INTO users VALUES (\''
-				+ req.body.uname + '\', UNHEX(\''
-				+ hash + '\'), \''
-				+ req.connection.remoteAddress + '\', \''
-				+ getDateTime() + '\', \''
-				+ sessionid + '\')',
-				function(err, rows, fields) { 
-					if (err) throw err; 
-					data.regSuc = 1;
-					app.renderPage(res, "register", data);
+			connection.query('SELECT user FROM users WHERE user = \'' + req.body.uname + '\'',
+				function(err, rows, fields) {
+					if (err) throw err;
+			
+					if (typeof rows[0] == "undefined") {
+						addUser(req, res, data, app, connection);
+					} else {
+						// There is already a user with the same name
+						data.regSuc = 3;
+						app.renderPage(res, "register", data);
+					}
 				});
-		
-			//cookieParser();
-			//console.log(req.cookies.player);
 		});
 	} else {
 		// different passwords
 		data.regSuc = 2;
 		app.renderPage(res, "register", data);
 	}
+}
+
+// Gets username with session ID string
+exports.getUsername = function(req, res, app, pool, data) {
+	var sessionid = req.cookies.session;
+	console.log(req.cookies.session);
+	
+	pool.getConnection(function(err, connection) {
+		connection.query('SELECT user FROM users WHERE sessionid = \'' + sessionid + '\'',
+		function(err, rows, fields) {
+			if (err) throw err;
+			
+			if (typeof rows[0] != "undefined") {
+				if (req.params.id == "register") {
+					data.regSuc = 8;
+				}
+				else if (req.params.id == "login") {
+					data.logSuc = 3;
+				}
+				// rows[0].user.toString('utf-8');
+			} else {
+				data.regSuc = 0;
+				data.logSuc = 0;
+			}
+			
+			app.sendPage(req, res, data);
+		});
+	});
 }

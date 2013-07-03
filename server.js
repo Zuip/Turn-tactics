@@ -14,6 +14,8 @@ app.set('view engine', 'ejs')
 app.set('views', __dirname);
 app.use(express.bodyParser());
 app.use(express.cookieParser());
+// app.use(express.session(session 'secret'));
+// app.use(app.route);
 
 // http url path
 var APP_PATH = "";
@@ -118,10 +120,7 @@ app.configure(function(){
 		app.sendPage(req, res, data);
 	});
 	app.get(APP_PATH+'/:id', function(req, res){
-		if (req.params.id == "register") {
-			data.regSuc = false;
-		}
-		app.sendPage(req, res, data);
+		sessions.getUsername(req, res, app, pool, data);
 	});
 	// serve images and css file directly
 	app.use(APP_PATH+"/images", express.static(__dirname + '/images'));
