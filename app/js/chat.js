@@ -1,11 +1,11 @@
 chat = {
 	socket: null,
 	connected: false,
-	tabs: 0,
-	msgWindow: 0,
-	userList: 0,
-	chatInput: 0,
-	chatInputText: 0,
+	tabs: null,
+	msgWindow: null,
+	userList: null,
+	chatInput: null,
+	chatInputText: null,
 	
 	currentChannel: "",
 	channels: [],
@@ -32,6 +32,11 @@ chat = {
 		
 		this.socket.on('channelJoinSuccessful', function(channel){
 			self.joinCallBack(channel);
+		});
+		
+		this.socket.on('userList', function(channel, userlist){
+			self.users[channel] = userlist;
+			self.updateUserList(channel);
 		});
 		
 		var chatDiv = $('#chat');
@@ -148,11 +153,10 @@ chat = {
 			for (var i=0; i<this.users[channel].length; ++i) {
 				var user = $('<div>', {
 				id: 'user-'+this.users[channel][i],
-				text: this.users[channel][i]
+				text: this.users[channel][i].username
 				}).appendTo(this.userList);
 			}
 		}
-		this.userList.html("moi");
 	},
 	
 	updateMessageList: function(channel) {

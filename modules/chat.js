@@ -1,27 +1,40 @@
 var usernames = {};
 
 getUser = function(socket) {
-	var data = {registered: socket.registered};
+	var data = {username: socket.username, registered: socket.registered};
 	return data;
+}
+
+getUserList = function(io, channel) {
+	var clients = io.sockets.clients(channel);
+	var userList = [];
+	
+	io.sockets.clients().forEach(function (socket) { 
+		userList.push(getUser(socket));
+	});
+	return userList;
 }
 
 module.exports = function(io) {
 
 	io.sockets.on('connection', function(socket) {
 	
-		boolean loggedIn = false;
+		var loggedIn = false;
 		if (loggedIn) {
 			// if logged in
 			socket.registered = true;
 		} else {
 			// guest, assign username
 			socket.registered = false;
+			// TODO: assign username that isn't in use
+			socket.username = "guest";
 		}
 		
 		socket.on('joinChannel', function(channel) {
 			if (true) { // check if user can join this channel
 				socket.join(channel);
 				socket.emit('channelJoinSuccessful', channel);
+				socket.emit('userList', channel, getUserList(io, channel));
 			} else {
 				// Tell user that they can't join on this channel
 				socket.emit('cannotJoinChannel', channel);
