@@ -3,6 +3,10 @@ var crypto = require('crypto');
 var key = 'jokuavain';
 var hash;
 
+function escape_string(string) {
+
+}
+
 // Generates a random string
 function generateRandomString(length) {
 	var chars = "1234567890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM";
@@ -19,7 +23,7 @@ function generateRandomString(length) {
 function checkPassword(app, req, res, data, connection) {
 	succeed = false;
 	hash = crypto.createHmac('sha1', key).update(req.body.pword).digest('hex');
-	connection.query('SELECT password AS password FROM users WHERE user = \'' + req.body.uname + '\'',
+	connection.query('SELECT password AS password FROM users WHERE user = ?', [req.body.uname],
 		function(err, rows, fields) {
 			if (err) throw err;
 			
@@ -43,12 +47,14 @@ function checkPassword(app, req, res, data, connection) {
 // Update session ID to new one.
 function updateSessionID(app, req, res, data, connection) {
 	var sessionid = generateRandomString(25);
-	connection.query('UPDATE users SET sessionid = \''
-		+ sessionid + '\' WHERE user = \'' + req.body.uname + '\'',
+	var query = connection.query('UPDATE users SET sessionid = ? WHERE user = ?',
+		[sessionid, req.body.uname],
 		function(err, rows, fields) { 
 			if (err) throw err;
 			res.cookie('session', sessionid, { maxAge: 900000, httpOnly: false});
 			data.logSuc = 1;
+			data.login = true;
+			data.username = req.body.uname;
 			app.renderPage(res, "login", data);
 		});
 }
@@ -66,11 +72,8 @@ exports.handleLoginPost = function(app, req, res, data, pool) {
 	// Add user to SQL-database
 function addUser(req, res, data, app, connection) {
 	var sessionid = generateRandomString(25);
-	connection.query('INSERT INTO users (user, password, ip, sessionid) VALUES (\''
-		+ req.body.uname + '\', UNHEX(\''
-		+ hash + '\'), \''
-		+ req.connection.remoteAddress + '\', \''
-		+ sessionid + '\')',
+	connection.query('INSERT INTO users (user, password, ip, sessionid) VALUES (?, ?, ?, ?)',
+		[req.body.uname, hash, req.connection.remoteAddress, sessionid],
 		function(err, rows, fields) { 
 			if (err) throw err;
 			// Add session cookies
@@ -120,7 +123,7 @@ exports.handleRegisterPost = function(app, req, res, data, pool) {
 				return;
 			}
 
-			connection.query('SELECT user FROM users WHERE user = \'' + req.body.uname + '\'',
+			connection.query('SELECT user FROM users WHERE user = ?', [req.body.uname],
 				function(err, rows, fields) {
 					if (err) throw err;
 			
@@ -145,15 +148,19 @@ exports.handleRegisterPost = function(app, req, res, data, pool) {
 // Gets username with session ID string
 exports.getUsername = function(req, res, app, pool, data, ajaxdataonly) {
 	var sessionid = req.cookies.session;
-	console.log("ASD "+req.cookies.session);
+	data.username = "";
+	data.login = false;
 	
 	pool.getConnection(function(err, connection) {
 		if (err) throw err;
-		connection.query('SELECT user FROM users WHERE sessionid = \'' + sessionid + '\'',
+		connection.query('SELECT user FROM users WHERE sessionid = ?', [sessionid],
 		function(err, rows, fields) {
 			if (err) throw err;
 			
 			if (typeof rows[0] != "undefined") {
+				data.username = rows[0].user;
+				data.login = true;
+			
 				if (req.params.id == "register") {
 					data.regSuc = 8;
 				}
@@ -162,6 +169,7 @@ exports.getUsername = function(req, res, app, pool, data, ajaxdataonly) {
 				}
 				else if (req.params.id == "logout") {
 					res.clearCookie('session');
+					data.login = false;
 				}
 			} else {
 				data.regSuc = 0;
