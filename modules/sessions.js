@@ -59,6 +59,7 @@ exports.handleLoginPost = function(app, req, res, data, pool) {
 	pool.getConnection(function(err, connection) {
 		if (err) throw err;
 		checkPassword(app, req, res, data, connection);
+		connection.end();
 	});
 }
 
@@ -131,6 +132,8 @@ exports.handleRegisterPost = function(app, req, res, data, pool) {
 						app.renderPage(res, "register", data);
 					}
 				});
+				
+			connection.end();
 		});
 	} else {
 		// different passwords
@@ -145,6 +148,7 @@ exports.getUsername = function(req, res, app, pool, data, ajaxdataonly) {
 	console.log("ASD "+req.cookies.session);
 	
 	pool.getConnection(function(err, connection) {
+		if (err) throw err;
 		connection.query('SELECT user FROM users WHERE sessionid = \'' + sessionid + '\'',
 		function(err, rows, fields) {
 			if (err) throw err;
@@ -170,5 +174,6 @@ exports.getUsername = function(req, res, app, pool, data, ajaxdataonly) {
 				app.sendPage(req, res, data);
 			}
 		});
+		connection.end();
 	});
 }
