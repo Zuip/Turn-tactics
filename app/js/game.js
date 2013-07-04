@@ -1,7 +1,8 @@
 var c = document.getElementById("gameArea");
 var ctx = c.getContext("2d");
-ctx.fillStyle = "#FF0000";
-ctx.fillRect(0, 0, c.width, c.height);
+
+var game = new Game();
+game.loader.init();
 
 // Pictures of land, water, roads, trees, buildings and mountain.
 function TilePictures() {
@@ -34,45 +35,85 @@ function TilePictures() {
 	}
 }
 
+function Loader() {
+	this.amountOfLoadable = 12;
+	this.amountLoaded = 0;
+	this.loaded = false;
+	this.loadBarLeft = 100;
+	this.loadBarRight = c.width - 100;
+	
+	// Returns the knowledge of have the needed data loaded.
+	this.haveLoaded = function() {
+		++this.amountLoaded;
+		ctx.fillStyle = "#1F7A99";
+		ctx.fillRect(0, 0, c.width, c.height);
+		ctx.fillStyle = "#FF00FF";
+		ctx.fillRect(100, 300, this.amountLoaded * 50 + 10, 50);
+		if(this.amountLoaded == this.amountOfLoadable) {
+			loaded = true;
+			// game.init();
+		}
+	}
+
+	this.init = function() {
+	
+		// Load map pictures
+		game.map.pictures.loadPictures();
+		game.map.pictures.sand.onload = function(){ game.loader.haveLoaded(); }
+		game.map.pictures.grass.onload = function(){ game.loader.haveLoaded(); }
+		game.map.pictures.water.onload = function(){ game.loader.haveLoaded(); }
+		game.map.pictures.road_straight.onload = function(){ game.loader.haveLoaded(); }
+		game.map.pictures.road_intersection1.onload = function(){ game.loader.haveLoaded(); }
+		game.map.pictures.road_intersection2.onload = function(){ game.loader.haveLoaded(); }
+		game.map.pictures.road_curve.onload = function(){ game.loader.haveLoaded(); }
+		game.map.pictures.road_end.onload = function(){ game.loader.haveLoaded(); }
+		game.map.pictures.building1.onload = function(){ game.loader.haveLoaded(); }
+		game.map.pictures.building2.onload = function(){ game.loader.haveLoaded(); }
+		game.map.pictures.tree1.onload = function(){ game.loader.haveLoaded(); }
+		game.map.pictures.mountain.onload = function(){ game.loader.haveLoaded(); }
+	}
+}
+
 function Tile() {
 	this.land;
 	this.object;
 	this.coordX = 0;
 	this.coordY = 0;
-	this.pictures = new TilePictures();
+	this.terrainCost;
+	this.defenceArea;
 	
 	this.draw = function() {
 	
 		// Draw land or water
 		if(land == 'sand') {
-			ctx.drawImage(this.pictures.sand, this.coordX, this.coordY);
+			ctx.drawImage(game.map.pictures.sand, this.coordX, this.coordY);
 		} else if(land == 'grass') {
-			ctx.drawImage(this.pictures.grass, this.coordX, this.coordY);
+			ctx.drawImage(game.map.pictures.grass, this.coordX, this.coordY);
 		} else if(land == 'water') {
-			ctx.drawImage(this.pictures.water, this.coordX, this.coordY);
+			ctx.drawImage(game.map.pictures.water, this.coordX, this.coordY);
 		} else {
-			ctx.drawImage(this.pictures.water, this.coordX, this.coordY);
+			ctx.drawImage(game.map.pictures.water, this.coordX, this.coordY);
 		}
 		
 		// Draw buildings, roads, trees and mountains
 		if(object == 'road_straight') {
-			ctx.drawImage(this.pictures.road_straight, this.coordX, this.coordY);
+			ctx.drawImage(game.map.pictures.road_straight, this.coordX, this.coordY);
 		} else if(object == 'road_intersection1') {
-			ctx.drawImage(this.pictures.road_intersection1, this.coordX, this.coordY);
+			ctx.drawImage(game.map.pictures.road_intersection1, this.coordX, this.coordY);
 		} else if(object == 'road_intersection2') {
-			ctx.drawImage(this.pictures.road_intersection2, this.coordX, this.coordY);
+			ctx.drawImage(game.map.pictures.road_intersection2, this.coordX, this.coordY);
 		} else if(object == 'road_curve') {
-			ctx.drawImage(this.pictures.road_curve, this.coordX, this.coordY);
+			ctx.drawImage(game.map.pictures.road_curve, this.coordX, this.coordY);
 		} else if(object == 'road_end') {
-			ctx.drawImage(this.pictures.road_end, this.coordX, this.coordY);
+			ctx.drawImage(game.map.pictures.road_end, this.coordX, this.coordY);
 		} else if(object == 'building1') {
-			ctx.drawImage(this.pictures.building1, this.coordX, this.coordY);
+			ctx.drawImage(game.map.pictures.building1, this.coordX, this.coordY);
 		} else if(object == 'building2') {
-			ctx.drawImage(this.pictures.buildin2, this.coordX, this.coordY);
+			ctx.drawImage(game.map.pictures.buildin2, this.coordX, this.coordY);
 		} else if(object == 'tree1') {
-			ctx.drawImage(this.pictures.tree1, this.coordX, this.coordY);
+			ctx.drawImage(game.map.pictures.tree1, this.coordX, this.coordY);
 		} else if(object == 'mountain') {
-			ctx.drawImage(this.pictures.mountain, this.coordX, this.coordY);
+			ctx.drawImage(game.map.pictures.mountain, this.coordX, this.coordY);
 		}
 	};
 	
@@ -110,6 +151,7 @@ function Map() {
 	this.nodes;
 	this.sizeX;
 	this.sizeY;
+	this.pictures = new TilePictures();
 
 	this.draw = function() {
 		
@@ -126,7 +168,8 @@ function Unit() {
 
 function Game() {
 	this.units;
-	this.map;
+	this.map = new Map();
+	this.loader = new Loader();
 	
 	// Mouse coordinates in canvas
 	this.mouseX;
@@ -137,18 +180,17 @@ function Game() {
 		mouseX = mouseRealX - c.offsetLeft + c.scrollLeft;
 		mouseY = mouseRealY - c.offsetTop + c.scrollTop;
 	};
+	
+	// Data loader
+	this.loaded = function() {
+		
+	}
 
 	// Initializes the game
 	this.init = function() {
-		//map = newArray();
-		var tile = new Tile();
-		tile.init('sand', '');
-		tile.draw();
+		//
 	}
 }
-
-var game = new Game();
-game.init();
 
 c.addEventListener('mousemove', function(e) {
 	// Update coordinates in game-class on mouse move.
