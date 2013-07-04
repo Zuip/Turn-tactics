@@ -1,5 +1,7 @@
 chat = {
 	socket: null,
+	firstConnect: true,
+	username: "Me",
 	connected: false,
 	tabs: null,
 	msgWindow: null,
@@ -14,43 +16,99 @@ chat = {
 	
 	init: function() {
 		var self = this;
+		if (this.connected == false) {
+			this.socket = io.connect("http://"+window.location.host);
+			this.connected = true;
+			
+			this.socket.on('connect', function() {
+				self.chatInputText.attr("disabled", false);
+			});
+			
+			this.socket.on('disconnect', function(){
+				self.socket.disconnect();
+				self.socket.removeAllListeners();
+				self.socket.socket.removeAllListeners();
+			});
+			
+			this.socket.on('error', function() {
+				self.addMessage(self.currentChannel, "", "Login to enter chat");
+				self.updateMessageList(self.currentChannel);
+			});
+			
+			this.socket.on('username', function(username) {
+				this.username = username;
+			});
 		
-		this.socket = io.connect("http://"+window.location.host);
-		this.socket.on('connect', function(){
-			self.chatInputText.attr("disabled", false);
-			self.connected = true;
-			self.joinChannel("main");
-		});
+			this.socket.on('messageDelivered', function(channel){
+				self.messages[channel].push({sender: this.username, msg: self.chatInputText.val()});
+				self.chatInputText.val("");
+				self.chatInputText.attr("disabled", false);
+				if (channel == self.currentChannel) {
+					self.updateMessageList(channel);
+				}
+			});
+			
+			this.socket.on('chatMessage', function(channel, user, message) {
+				self.addMessage(channel, user.username, message);
+				if (channel == self.currentChannel) {
+					self.updateMessageList(channel);
+				}
+			});
+			
+			this.socket.on('channelJoinSuccessful', function(channel, username) {
+				self.channels.push(channel);
+			
+				if (typeof self.messages[channel] == "undefined") {
+					self.messages[channel] = new Array();
+				}
+				if (typeof self.users[channel] == "undefined") {
+					self.users[channel] = new Array();
+				}
+				
+				var channelTab = $('<a>', {
+				id: 'chat-'+channel,
+				class: 'chatTab',
+				text: channel
+				}).appendTo(self.tabs);
+				channelTab.on('click', function() {
+					//todo: changetab
+				});
+				
+				self.changeTab(channel, false);
+			});
+			
+			this.socket.on('userJoin', function(channel, user){
+				self.addMessage(self.currentChannel, "", "User " + user.username + " joined the channel");
+				if (channel == self.currentChannel) {
+					self.updateMessageList(channel);
+				}
+				self.users[channel][user.username] = user;
+				self.updateUserList(channel);
+			});
+			this.socket.on('userLeave', function(channel, user){
+				self.addMessage(self.currentChannel, "", "User " + user.username + " left the channel");
+				if (channel == self.currentChannel) {
+					self.updateMessageList(channel);
+				}
+				delete self.users[channel][user.username];
+				self.updateUserList(channel);
+			});
+			this.socket.on('userDisconnect', function(channel, user){
+				self.addMessage(self.currentChannel, "", "User " + user.username + " left the chat");
+				if (channel == self.currentChannel) {
+					self.updateMessageList(channel);
+				}
+				delete self.users[channel][user.username];
+				self.updateUserList(channel);
+			});
+			
+			this.socket.on('userList', function(channel, userlist){
+				self.users[channel] = {};
+				self.users[channel] = userlist;
+				self.updateUserList(channel);
+			});
 		
-		this.socket.on('error', function() {
-			self.addMessage(self.currentChannel, "", "Login to enter chat");
-			self.updateMessageList(self.currentChannel);
-		});
-	
-		this.socket.on('messageDelivered', function(channel){
-			self.messages[channel].push({sender: "Me", msg: self.chatInputText.val()});
-			self.chatInputText.val("");
-			self.chatInputText.attr("disabled", false);
-			if (channel == self.currentChannel) {
-				self.updateMessageList(channel);
-			}
-		});
-		
-		this.socket.on('chatMessage', function(channel, user, message) {
-			self.addMessage(channel, user.username, message);
-			if (channel == self.currentChannel) {
-				self.updateMessageList(channel);
-			}
-		});
-		
-		this.socket.on('channelJoinSuccessful', function(channel){
-			self.joinCallBack(channel);
-		});
-		
-		this.socket.on('userList', function(channel, userlist){
-			self.users[channel] = userlist;
-			self.updateUserList(channel);
-		});
+		}
 		
 		var chatDiv = $('#chat');
 		$('#chat').empty();
@@ -87,41 +145,19 @@ chat = {
 			self.chatInputText.attr("disabled", true);
 		}
 		
-		this.updateTabs();
 		if (this.currentChannel != "") {
 			this.changeTab(this.currentChannel, true);
+		} else {
+			this.updateUserList(this.currentChannel);
+			this.updateMessageList(this.currentChannel);
 		}
 		
 	},
 	
 	joinChannel: function(channel) {
 		if (this.channels.indexOf(channel) == -1) {
-			//TODO: send connect message
 			this.socket.emit('joinChannel', channel);
 		}
-	},
-	
-	joinCallBack: function(channel) {
-	
-		this.channels.push(channel);
-	
-		if (typeof this.messages[channel] == "undefined") {
-			this.messages[channel] = new Array();
-		}
-		if (typeof this.users[channel] == "undefined") {
-			this.users[channel] = new Array();
-		}
-		
-		var channelTab = $('<a>', {
-		id: 'chat-'+channel,
-		class: 'chatTab',
-		text: channel
-		}).appendTo(this.tabs);
-		channelTab.on('click', function() {
-			//todo: changetab
-		});
-		
-		this.changeTab(channel, false);
 	},
 	
 	addMessage: function(channel, sender, message) {
@@ -131,10 +167,7 @@ chat = {
 		this.messages[this.currentChannel].push({sender: sender, msg: message});
 	},
 	
-	
-	
 	isScrollOnBottom: function(element) {
-	//alert((element.prop("scrollHeight") - element.scrollTop()) + "#"+ element.height());
 		if (element.prop("scrollHeight") - element.scrollTop() == element.height()) {
 			return true;
 		}
@@ -182,12 +215,15 @@ chat = {
 	
 	updateUserList: function(channel) {
 		//todo: sort users?
-		$('#usersList').empty();
+		
+		this.userList.html("");
+		this.userList.children().remove();
+		
 		if (typeof this.users[channel] != 'undefined') {
-			for (var i=0; i<this.users[channel].length; ++i) {
-				var user = $('<div>', {
-				id: 'user-'+this.users[channel][i],
-				text: this.users[channel][i].username
+			for (user in this.users[channel]) {
+				var userEntry = $('<div>', {
+				id: 'user-'+this.users[channel][user].username,
+				text: this.users[channel][user].username
 				}).appendTo(this.userList);
 			}
 		}
