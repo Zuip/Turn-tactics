@@ -55,8 +55,6 @@ $(function() {
 			setPageContent(state.data.page);
 		});
 	}
-	
-	updateLinks();
 
 	var path = window.location.pathname;
 	var realPath = path.substring(APP_PATH.length+1);
@@ -66,23 +64,21 @@ $(function() {
 	if (dir != "") {
 		if (dir in pages) {
 			currentPage = dir;
-			if (History.enabled) {
-				History.replaceState({page: currentPage}, document.title, APP_PATH+"/"+realPath);
+			if (typeof pages[currentPage].init == 'function') {
+				pages[currentPage].init();
 			}
+			History.pushState({page: currentPage}, document.title, APP_PATH+"/"+currentPage);
 		}
 	} else {
 		currentPage = "index";
+		// if user had no page set, leave it that way in browser url bar
+		History.pushState({page: currentPage}, document.title, "");
 		if (typeof pages[currentPage].init == 'function') {
 			pages[currentPage].init();
 		}
-		// if user had no page set, leave it that way in browser url bar
-		if (History.enabled) {
-			History.replaceState({page: "index"}, document.title, "");
-		}
 	}
-	if (typeof pages[currentPage].init == 'function') {
-		pages[currentPage].init();
-	}
+
+	updateLinks();
 	firstInit = false;
 	
 });
@@ -101,7 +97,6 @@ function setPageContent(page) {
 			pages[currentPage].clean();
 		}
 	}
-	var data = {};
 
 	$.getJSON('ajax/'+page, function(jsondata) {
 			var data = {data: jsondata};
@@ -116,10 +111,12 @@ function completePageChange(page, data) {
 	$("#navigation").html(components["navigation"].render(data));
 	var view = templates[page].render(data);
 	$("#main").html(view);
-	if (typeof pages[page].init == 'function') {
-		pages[page].init();
-	}
 	updateLinks();
 	currentPage = page;
+	if (firstInit == false) {
+		if (typeof pages[currentPage].init == 'function') {
+			pages[currentPage].init();
+		}
+	}
 
 }
