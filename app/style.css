@@ -166,19 +166,21 @@ h5 a:hover {
 }
 
 #tabs {
-	padding: 0;
+	padding: 3px;
 	margin: 0;
 	border-bottom: 1px solid #000;
 }
 
 .chatTab {
-	padding: 0;
+	padding: 3;
 	margin: 0;
-	background-color: #aaa;
+	margin-right: 3px;
+	background-color: #ccc;
 }
 
 .chatTabSelected {
 	font-weight: bold;
+	background-color: #aaa;
 }
 
 #msgWindow {

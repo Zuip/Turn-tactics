@@ -54,13 +54,12 @@ module.exports = function(io, pool) {
 
 	io.sockets.on('connection', function(socket) {
 		socket.username = socket.handshake.username;
+		socket.emit('username', socket.username);
 		
 		socket.on('joinChannel', function(channel) {
 			if (true) { // check if user can join this channel
 				socket.broadcast.to(channel).emit('userJoin', channel, getUser(socket));
 				socket.join(channel);
-				socket.emit('username', socket.username);
-				console.log("JOIN "+socket.username);
 				socket.emit('channelJoinSuccessful', channel, socket.username);
 				socket.emit('userList', channel, getUserList(io, channel));
 				socket.channels = {};
@@ -80,8 +79,13 @@ module.exports = function(io, pool) {
 		});
 		socket.on('sendMessage', function(channel, message) {
 			if (true) { // check if user is on the channel
-				socket.emit('messageDelivered', channel);
-				socket.broadcast.to(channel).emit('chatMessage', channel, getUser(socket), message);
+				if (channel == "") {
+					// not allowed
+					socket.emit('messageDelivered', channel, false);
+				} else {
+					socket.emit('messageDelivered', channel, true);
+					socket.broadcast.to(channel).emit('chatMessage', channel, getUser(socket), message);
+				}
 			} else {
 				// not on channel
 				socket.emit('notOnChannel', { channel: channel });

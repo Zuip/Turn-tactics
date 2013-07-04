@@ -22,6 +22,9 @@ chat = {
 			
 			this.socket.on('connect', function() {
 				self.chatInputText.attr("disabled", false);
+				self.messages[""] = new Array();
+				self.joinChannel("main");
+				self.joinChannel("main2");
 			});
 			
 			this.socket.on('disconnect', function(){
@@ -39,13 +42,15 @@ chat = {
 				this.username = username;
 			});
 		
-			this.socket.on('messageDelivered', function(channel){
-				self.messages[channel].push({sender: this.username, msg: self.chatInputText.val()});
-				self.chatInputText.val("");
+			this.socket.on('messageDelivered', function(channel, status){
 				self.chatInputText.attr("disabled", false);
-				if (channel == self.currentChannel) {
-					self.updateMessageList(channel);
+				if (status == true) {
+					self.messages[channel].push({sender: this.username, msg: self.chatInputText.val()});
+					if (channel == self.currentChannel) {
+						self.updateMessageList(channel);
+					}
 				}
+				self.chatInputText.val("");
 			});
 			
 			this.socket.on('chatMessage', function(channel, user, message) {
@@ -71,7 +76,7 @@ chat = {
 				text: channel
 				}).appendTo(self.tabs);
 				channelTab.on('click', function() {
-					//todo: changetab
+					self.changeTab(channel, false);
 				});
 				
 				self.changeTab(channel, false);
@@ -181,7 +186,7 @@ chat = {
 	changeTab: function(channel, init) {
 		if (channel != this.currentChannel || init == true) {
 			if (this.currentChannel != "") {
-				$("chat-"+this.currentChannel).removeClass("tabSelected");
+				$("#chat-"+this.currentChannel).removeClass("chatTabSelected");
 			}
 			this.updateMessageList(channel);
 			this.updateUserList(channel);
@@ -207,7 +212,7 @@ chat = {
 				}).appendTo(this.tabs);
 				var channelName = this.channels[i];
 				channelTab.on('click', function() {
-					//todo: changetab
+					self.changeTab(channel, channelName);
 				});
 			}
 		}
