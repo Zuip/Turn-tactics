@@ -2,5 +2,9 @@
 <ul>
 	<li><a href="index" class="inner_link"><%= messages.index %></a></li>
 	<li><a href="editor" class="inner_link"><%= messages.editor %></a></li>
+	<% if (data.login == true) { %>
 	<li><a href="game" class="inner_link"><%= messages.game %></a></li>
+	<li><a href="chat" class="inner_link"><%= messages.chat %></a></li>
+	<li><a href="logout" class="inner_link"><%= messages.logout %></a></li>
+	<% } %>
 </ul>

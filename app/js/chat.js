@@ -150,6 +150,7 @@ chat = {
 			self.chatInputText.attr("disabled", true);
 		}
 		
+		this.updateTabs();
 		if (this.currentChannel != "") {
 			this.changeTab(this.currentChannel, true);
 		} else {

@@ -76,6 +76,8 @@ function addUser(req, res, data, app, connection, hash) {
 			
 			// Adding the user succeeded
 			data.regSuc = 1;
+			data.login = true;
+			data.username = req.body.uname;
 			app.renderPage(res, "register", data);
 		});
 }
