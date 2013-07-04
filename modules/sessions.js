@@ -2,10 +2,7 @@
 var crypto = require('crypto');
 var key = 'jokuavain';
 var hash;
-
-function escape_string(string) {
-
-}
+var autoLogOffTime = 900000;
 
 // Generates a random string
 function generateRandomString(length) {
@@ -51,7 +48,7 @@ function updateSessionID(app, req, res, data, connection) {
 		[sessionid, req.body.uname],
 		function(err, rows, fields) { 
 			if (err) throw err;
-			res.cookie('session', sessionid, { maxAge: 900000, httpOnly: false});
+			res.cookie('session', sessionid, { maxAge: autoLogOffTime, httpOnly: false});
 			data.logSuc = 1;
 			data.login = true;
 			data.username = req.body.uname;
@@ -77,7 +74,7 @@ function addUser(req, res, data, app, connection) {
 		function(err, rows, fields) { 
 			if (err) throw err;
 			// Add session cookies
-			res.cookie('session', sessionid, { maxAge: 900000, httpOnly: false});
+			res.cookie('session', sessionid, { maxAge: autoLogOffTime, httpOnly: false});
 			
 			// Adding the user succeeded
 			data.regSuc = 1;
@@ -145,6 +142,15 @@ exports.handleRegisterPost = function(app, req, res, data, pool) {
 	}
 }
 
+function sendPageContent(ajaxdataonly, req, res, data, app) {
+	if (ajaxdataonly) {
+		res.header("Content-Type", "application/json");
+		res.send(JSON.stringify(data));
+	} else {
+		app.sendPage(req, res, data);
+	}
+}
+
 // Gets username with session ID string
 exports.getUsername = function(req, res, app, pool, data, ajaxdataonly) {
 	var sessionid = req.cookies.session;
@@ -153,13 +159,26 @@ exports.getUsername = function(req, res, app, pool, data, ajaxdataonly) {
 	
 	pool.getConnection(function(err, connection) {
 		if (err) throw err;
-		connection.query('SELECT user FROM users WHERE sessionid = ?', [sessionid],
+		connection.query('SELECT user FROM users WHERE sessionid = ? AND (TIMESTAMPDIFF(MINUTE, `last_used`, NOW()) < 15)', [sessionid],
 		function(err, rows, fields) {
 			if (err) throw err;
 			
 			if (typeof rows[0] != "undefined") {
 				data.username = rows[0].user;
 				data.login = true;
+				
+				if(req.params.id != "logout") {
+				
+					// Make new session ID and give the session more time.
+					var sessionid = generateRandomString(25);
+					var query = connection.query('UPDATE users SET sessionid = ? WHERE sessionid = ?',
+												[sessionid, req.cookies.session],
+						function(err, rows, fields) { 
+							if (err) throw err;
+							res.cookie('session', sessionid, { maxAge: autoLogOffTime, httpOnly: false});
+							sendPageContent(ajaxdataonly, req, res, data, app);
+						});
+				}
 			
 				if (req.params.id == "register") {
 					data.regSuc = 8;
@@ -170,16 +189,12 @@ exports.getUsername = function(req, res, app, pool, data, ajaxdataonly) {
 				else if (req.params.id == "logout") {
 					res.clearCookie('session');
 					data.login = false;
+					sendPageContent(ajaxdataonly, req, res, data, app);
 				}
 			} else {
 				data.regSuc = 0;
 				data.logSuc = 0;
-			}
-			if (ajaxdataonly) {
-				res.header("Content-Type", "application/json");
-				res.send(JSON.stringify(data));
-			} else {
-				app.sendPage(req, res, data);
+				sendPageContent(ajaxdataonly, req, res, data, app);
 			}
 		});
 		connection.end();

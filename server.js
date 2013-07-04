@@ -39,10 +39,9 @@ chat = require('./modules/chat')(io, pool);
 // modify JSON data to be passed to front-end according to POST data
 app.handlePostQueries = function(req, res, data){
 	if(typeof req.body.register != "undefined") {
-		console.log('rekisterointi');
+		// console.log('rekisterointi');
 		sessions.handleRegisterPost(app, req, res, data, pool);
 	} else if(typeof req.body.login != "undefined") {
-		console.log('kirjautuminen');
 		sessions.handleLoginPost(app, req, res, data, pool);
 	}
 }
