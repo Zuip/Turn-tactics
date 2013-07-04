@@ -108,7 +108,8 @@ function Node() {
 
 function Map() {
 	this.nodes;
-	this.size;
+	this.sizeX;
+	this.sizeY;
 
 	this.draw = function() {
 		

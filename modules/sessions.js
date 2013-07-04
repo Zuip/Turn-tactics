@@ -1,7 +1,6 @@
 // This is better than nothing, the key must be changed when the game is really used.
 var crypto = require('crypto');
 var key = 'jokuavain';
-var hash;
 var autoLogOffTime = 900000;
 
 // Generates a random string
@@ -19,14 +18,13 @@ function generateRandomString(length) {
 // Check password and if it is ok, update sessionID.
 function checkPassword(app, req, res, data, connection) {
 	succeed = false;
-	hash = crypto.createHmac('sha1', key).update(req.body.pword).digest('hex');
+	var hash = crypto.createHmac('sha1', key).update(req.body.pword).digest('hex');
 	connection.query('SELECT password AS password FROM users WHERE user = ?', [req.body.uname],
 		function(err, rows, fields) {
 			if (err) throw err;
 			
 			if (typeof rows[0] != "undefined") {
-				var password = rows[0].password.toString('hex');
-				
+				var password = rows[0].password.toString('utf-8');
 				if(password == hash) {
 					updateSessionID(app, req, res, data, connection);
 				} else {
@@ -67,10 +65,10 @@ exports.handleLoginPost = function(app, req, res, data, pool) {
 }
 
 	// Add user to SQL-database
-function addUser(req, res, data, app, connection) {
+function addUser(req, res, data, app, connection, hash) {
 	var sessionid = generateRandomString(25);
-	connection.query('INSERT INTO users (user, password, ip, sessionid) VALUES (?, ?, ?, ?)',
-		[req.body.uname, hash, req.connection.remoteAddress, sessionid],
+	var query = connection.query('INSERT INTO users (user, password, ip, sessionid) VALUES (?, \'' + hash + '\', ?, ?)',
+		[req.body.uname, req.connection.remoteAddress, sessionid],
 		function(err, rows, fields) { 
 			if (err) throw err;
 			// Add session cookies
@@ -90,7 +88,7 @@ exports.handleRegisterPost = function(app, req, res, data, pool) {
 		
 			if (err) throw err;
 
-			hash = crypto.createHmac('sha1', key).update(req.body.pword).digest('hex');
+			var hash = crypto.createHmac('sha1', key).update(req.body.pword).digest('hex');
 			
 			// Check that password is long enough. Short one is good for testing.
 			if(req.body.pword.length < 3) {
@@ -125,7 +123,7 @@ exports.handleRegisterPost = function(app, req, res, data, pool) {
 					if (err) throw err;
 			
 					if (typeof rows[0] == "undefined") {
-						addUser(req, res, data, app, connection);
+						addUser(req, res, data, app, connection, hash);
 					} else {
 						// There is already a user with the same name
 						data.regSuc = 3;
