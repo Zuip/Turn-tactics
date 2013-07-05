@@ -40,9 +40,13 @@ chat = require('./modules/chat')(io, pool);
 app.handlePostQueries = function(req, res, data){
 	if(typeof req.body.register != "undefined") {
 		// console.log('rekisterointi');
-		sessions.handleRegisterPost(app, req, res, data, pool);
+		sessions.handleRegisterPost(req, res, data, pool, function() {
+			app.renderPage(res, "register", data);
+		});
 	} else if(typeof req.body.login != "undefined") {
-		sessions.handleLoginPost(app, req, res, data, pool);
+		sessions.handleLoginPost(req, res, data, pool, function() {
+			app.renderPage(res, "login", data);
+		});
 	}
 }
 
@@ -86,6 +90,16 @@ app.renderPage = function(res, page, data) {
 	});
 }
 
+// handles normal requests and ajax requests
+function sendPageContent(req, res, data, ajaxdataonly) {
+	if (ajaxdataonly) {
+		res.header("Content-Type", "application/json");
+		res.send(JSON.stringify(data));
+	} else {
+		app.sendPage(req, res, data);
+	}
+}
+
 // sends a response to the user
 app.sendPage = function(req, res, data) {
 	var page = app.getPage(req.params);
@@ -103,12 +117,12 @@ app.configure(function(){
 		app.handlePostQueries(req, res, data);
 	});
 	
-	// Handle post requests
+	// Handle registering
 	app.post(APP_PATH+'/register', function(req, res) {
 		app.handlePostQueries(req, res, data);
 	});
 	
-	// Handle post requests
+	// Handle logins
 	app.post(APP_PATH+'/login', function(req, res) {
 		app.handlePostQueries(req, res, data);
 	});
@@ -121,8 +135,10 @@ app.configure(function(){
 	// Respond to ajax queries
 	app.get(APP_PATH+'/ajax/:id', function(req, res){
 		if (req.xhr) { // test if ajax call
-			//last param tells to send ajax data
-			sessions.getUsername(req, res, app, pool, data, true);
+			sessions.handlePage(req, res, pool, data, function() {
+				//last param tells to send ajax data
+				sendPageContent(req, res, data, true);
+			});
 		}
 	});
 	
@@ -132,7 +148,10 @@ app.configure(function(){
 	});
 	app.get(APP_PATH+'/:id', function(req, res){
 		// regular page
-		sessions.getUsername(req, res, app, pool, data, false);
+		sessions.handlePage(req, res, pool, data, function() {
+			//last param tells to send ajax data
+			sendPageContent(req, res, data, false);
+		});
 	});
 	// serve images and css file directly
 	app.use(APP_PATH+"/images", express.static(__dirname + '/images'));
