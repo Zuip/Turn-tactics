@@ -76,7 +76,7 @@ chat = {
 				text: channel
 				}).appendTo(self.tabs);
 				channelTab.on('click', function() {
-					self.changeTab(channel, false);
+					self.changeTab($(this).attr('id').substr(5), false);
 				});
 				
 				self.changeTab(channel, false);
@@ -211,9 +211,9 @@ chat = {
 				class: 'chatTab',
 				text: this.channels[i]
 				}).appendTo(this.tabs);
-				var channelName = this.channels[i];
+				var self = this;
 				channelTab.on('click', function() {
-					self.changeTab(channel, channelName);
+					self.changeTab($(this).attr('id').substr(5), false);
 				});
 			}
 		}
