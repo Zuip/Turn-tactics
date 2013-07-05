@@ -6,18 +6,20 @@ game.loader.init();
 
 // Pictures of land, water, roads, trees, buildings and mountain.
 function TilePictures() {
-	this.sand = new Image();
-	this.grass = new Image();
-	this.water = new Image();
-	this.road_straight = new Image();
-	this.road_intersection1 = new Image();
-	this.road_intersection2 = new Image();
-	this.road_curve = new Image();
-	this.road_end = new Image();
-	this.building1 = new Image();
-	this.building2 = new Image();
-	this.tree1 = new Image();
-	this.mountain = new Image();
+	this.amountOfPictures = 0;
+
+	this.sand = new Image(); ++this.amountOfPictures;
+	this.grass = new Image(); ++this.amountOfPictures;
+	this.water = new Image(); ++this.amountOfPictures;
+	this.road_straight = new Image(); ++this.amountOfPictures;
+	this.road_intersection1 = new Image(); ++this.amountOfPictures;
+	this.road_intersection2 = new Image(); ++this.amountOfPictures;
+	this.road_curve = new Image(); ++this.amountOfPictures;
+	this.road_end = new Image(); ++this.amountOfPictures;
+	this.building1 = new Image(); ++this.amountOfPictures;
+	this.building2 = new Image(); ++this.amountOfPictures;
+	this.tree1 = new Image(); ++this.amountOfPictures;
+	this.mountain = new Image(); ++this.amountOfPictures;
 	
 	this.loadPictures = function() {
 		this.sand.src = APP_PATH + '/images/sand.png';
@@ -26,8 +28,8 @@ function TilePictures() {
 		this.road_straight.src = APP_PATH + '/images/road_straight.png';
 		this.road_intersection1.src = APP_PATH + '/images/road_intersection1.png';
 		this.road_intersection2.src = APP_PATH + '/images/road_intersection2.png';
-		this.road_curve.src = APP_PATH + '/images/curve.png';
-		this.road_end.src = APP_PATH + '/images/end.png';
+		this.road_curve.src = APP_PATH + '/images/road_curve.png';
+		this.road_end.src = APP_PATH + '/images/road_end.png';
 		this.building1.src = APP_PATH + '/images/building1.gif';
 		this.building2.src = APP_PATH + '/images/building2.png';
 		this.tree1.src = APP_PATH + '/images/tree1.png';
@@ -36,26 +38,66 @@ function TilePictures() {
 }
 
 function Loader() {
-	this.amountOfLoadable = 12;
+	this.amountOfLoadable;
 	this.amountLoaded = 0;
 	this.loaded = false;
-	this.loadBarLeft = 100;
-	this.loadBarRight = c.width - 100;
+	
+	// Loader screen's information
+	this.loadBarTop = 330;
+	this.loadBarHeight = 50;
+	this.topicTop = 250;
+	this.loadingTextTop = 300;
+	this.topic = "Turn tactics";
+	this.loadingText = "Loading";
+	
+	// Draw background, topic, loading-text and loader-bar
+	this.drawLoader = function() {
+		var textInfo;
+	
+		// Background
+		ctx.fillStyle = "#1F7A99";
+		ctx.fillRect(0, 0, c.width, c.height);
+		
+		// Loader-bar's background
+		ctx.fillStyle = "#FF6666";
+		ctx.fillRect(100, this.loadBarTop, c.width - 200, this.loadBarHeight);
+		
+		// Loader bar's amount of loaded data
+		ctx.fillStyle = "#00CC66";
+		ctx.fillRect(100, this.loadBarTop, ( this.amountLoaded / this.amountOfLoadable ) * ( c.width - 200 ),
+				this.loadBarHeight);
+				
+		// Black rectangle around loader-bar
+		ctx.strokeStyle = "#000000";
+		ctx.strokeRect(100, this.loadBarTop, c.width - 200, this.loadBarHeight);
+		
+		// Topic
+		ctx.font = "40pt Calibri";
+		ctx.fillStyle = "#000000";
+		textInfo = ctx.measureText(this.topic);
+		ctx.fillText( this.topic, ( c.width / 2 ) - ( textInfo.width / 2 ), this.topicTop );
+		
+		// Loading-text
+		ctx.font = "30pt Calibri";
+		ctx.fillStyle = "#000000";
+		textInfo2 = ctx.measureText(this.loadingText);
+		ctx.fillText( this.loadingText, ( c.width / 2 ) - ( textInfo.width / 4 ), this.loadingTextTop );
+	}
 	
 	// Returns the knowledge of have the needed data loaded.
 	this.haveLoaded = function() {
 		++this.amountLoaded;
-		ctx.fillStyle = "#1F7A99";
-		ctx.fillRect(0, 0, c.width, c.height);
-		ctx.fillStyle = "#FF00FF";
-		ctx.fillRect(100, 300, this.amountLoaded * 50 + 10, 50);
+		
+		this.drawLoader();
+		
 		if(this.amountLoaded == this.amountOfLoadable) {
 			loaded = true;
-			// game.init();
+			game.init();
 		}
 	}
 
 	this.init = function() {
+		this.amountOfLoadable = game.map.pictures.amountOfPictures;
 	
 		// Load map pictures
 		game.map.pictures.loadPictures();
@@ -180,11 +222,6 @@ function Game() {
 		mouseX = mouseRealX - c.offsetLeft + c.scrollLeft;
 		mouseY = mouseRealY - c.offsetTop + c.scrollTop;
 	};
-	
-	// Data loader
-	this.loaded = function() {
-		
-	}
 
 	// Initializes the game
 	this.init = function() {
