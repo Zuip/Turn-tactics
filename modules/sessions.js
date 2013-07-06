@@ -20,15 +20,28 @@ exports.handlePage = function(req, res, pool, data, callback) {
 	var sessionid = req.cookies.session;
 	data.username = "";
 	data.login = false;
+	data.status = 0;
 	
 	pool.getConnection(function(err, connection) {
-		if (err) throw err;
-		getUsername(connection, sessionid, data, function() {
-			sendPage(req, res, connection, data, function() {
-				callback();
+		if (err) {
+			if (err.code == 'ECONNREFUSED') {
+				console.log("refused");
+				data.status = 1;
+				sendPage(req, res, connection, data, function() {
+					callback();
+					return;
+				});
+			} else {
+				throw err;
+			}
+		} else {
+			getUsername(connection, sessionid, data, function() {
+				sendPage(req, res, connection, data, function() {
+					callback();
+				});
 			});
-		});
-		connection.end();
+			connection.end();
+		}
 	});
 }
 

@@ -9,6 +9,7 @@ var History = window.History;
 for (var page in pages) {
 	templates[page] = new EJS({url: APP_PATH+'/app/templates/' + page});
 }
+components["status"] = new EJS({url: APP_PATH+'/app/templates/status.ejs'});
 components["logininfo"] = new EJS({url: APP_PATH+'/app/templates/logininfo.ejs'});
 components["navigation"] = new EJS({url: APP_PATH+'/app/templates/navigation.ejs'});
 
@@ -107,6 +108,8 @@ function setPageContent(page) {
 
 function completePageChange(page, data) {
 
+	alert(data.toSource());
+	$("#status").html(components["status"].render(data));
 	$("#login").html(components["logininfo"].render(data));
 	$("#navigation").html(components["navigation"].render(data));
 	var view = templates[page].render(data);

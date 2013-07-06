@@ -55,11 +55,14 @@ app.handlePostQueries = function(req, res, data){
 app.getPage = function(params) {
 
 	var page = "index";
+	var exclude = ["logininfo", "navigation", "status"];
 	var string = params.id;
 	
 	if(typeof string != "undefined" && string.match(/[a-zA-Z0-9]+/) ) { 
-		if (fs.existsSync("app/templates/"+string+".ejs") == true) {
-			page = string;
+		if (exclude.indexOf(string) == -1) {
+			if (fs.existsSync("app/templates/"+string+".ejs") == true) {
+				page = string;
+			}
 		}
 	}
 	return page;
@@ -70,21 +73,24 @@ app.renderPage = function(res, page, data) {
 	var content = {};
 	var indexContent = { messages: languages[language].messages,
 						data: data };
-								
-	app.render('./app/templates/logininfo.ejs', {messages: languages.en.messages, data: data}, function(err, logininfo) {
-	if (err) throw err;
-		app.render('./app/templates/navigation.ejs', {messages: languages.en.messages, data: data}, function(err, navigation) {
-			if (err) throw err;
-			app.render('./app/templates/' + page + ".ejs", indexContent, function(err, html) {
+	
+	app.render('./app/templates/status.ejs', {messages: languages.en.messages, data: data}, function(err, status) {	
+		app.render('./app/templates/logininfo.ejs', {messages: languages.en.messages, data: data}, function(err, logininfo) {
+		if (err) throw err;
+			app.render('./app/templates/navigation.ejs', {messages: languages.en.messages, data: data}, function(err, navigation) {
 				if (err) throw err;
-				content.content = html;
-				res.render('views/index', {APP_PATH: APP_PATH,
-											logininfo: logininfo,
-											navigation: navigation,
-											language: language, 
-											messages: languages.en.messages,
-											data: data,
-											content: content.content});
+				app.render('./app/templates/' + page + ".ejs", indexContent, function(err, html) {
+					if (err) throw err;
+					content.content = html;
+					res.render('views/index', {APP_PATH: APP_PATH,
+												logininfo: logininfo,
+												navigation: navigation,
+												status: status,
+												language: language, 
+												messages: languages.en.messages,
+												data: data,
+												content: content.content});
+				});
 			});
 		});
 	});
@@ -110,7 +116,7 @@ app.sendPage = function(req, res, data) {
 app.configure(function(){
 	
 	// Data container
-	var data = {};
+	var data = {status: 0};
 	
 	// Handle post requests
 	app.post(APP_PATH+'/', function(req, res) {

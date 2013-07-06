@@ -1,5 +1,5 @@
 body {
-	background: url(images/bg.png);
+	background: url(../images/bg.png);
 }
 
 #border {
@@ -137,6 +137,22 @@ h5 a:hover {
 	border-radius: 5px;
 	background: #FFF;
 	font-family: Arial;
+}
+
+#status {
+	padding: 0px;
+	margin: 0px;
+}
+
+#status ul {
+	padding: 5px;
+	margin: 0;
+}
+#status li {
+	background: url('../images/exclamation.png') no-repeat top left;
+	padding-left: 24px;
+	margin: 0;
+	list-style: none;
 }
 
 #main {
