@@ -4,104 +4,54 @@ var ctx = c.getContext("2d");
 var game = new Game();
 game.loader.init();
 
-var gamemod = "editor";
+function Picture(name, pictureAddress) {
+	this.name = name;
+	this.pictureAddress = pictureAddress;
+	this.image;
+	this.type;
+
+	this.init = function() {
+		++game.pictures.amountOfPictures;
+		this.name = name;
+		this.image = new Image();
+		this.image.src = APP_PATH + pictureAddress;
+		this.image.onload = function(){ game.loader.haveLoaded(); }
+	}
+}
 
 // Pictures of land, water, roads, trees, buildings and mountain.
-function TilePictures() {
+function Pictures() {
 	this.amountOfPictures = 0;
-
-	this.sand;
-	this.grass;
-	this.water;
-	this.road_straight;
-	this.road_intersection1;
-	this.road_intersection2;
-	this.road_curve;
-	this.road_end;
-	this.building1;
-	this.building2;
-	this.tree1;
-	this.mountain;
-	this.selector;
+	
+	this.pictures = new Array();
+	
+	this.returnPicture = function(name) {
+		for(var i = 0; i < this.pictures.length; ++i) {
+			if(this.pictures[i].name == name) {
+				return this.pictures[i].image;
+			}
+		}
+	}
 	
 	this.loadPictures = function() {
-		// Sand
-		this.sand = new Image();
-		++this.amountOfPictures;
-		this.sand.src = APP_PATH + '/images/sand.png';
-		this.sand.onload = function(){ game.loader.haveLoaded(); }
+	
+		this.pictures[0] = new Picture('sand', '/images/sand.png');
+		this.pictures[1] = new Picture('grass', '/images/grass.png');
+		this.pictures[2] = new Picture('water', '/images/water.png');
+		this.pictures[3] = new Picture('road_straight', '/images/road_straight.png');
+		this.pictures[4] = new Picture('road_intersection1', '/images/road_intersection1.png');
+		this.pictures[5] = new Picture('road_intersection2', '/images/road_intersection2.png');
+		this.pictures[6] = new Picture('road_curve', '/images/road_curve.png');
+		this.pictures[7] = new Picture('road_end', '/images/road_end.png');
+		this.pictures[8] = new Picture('building1', '/images/building1.gif');
+		this.pictures[9] = new Picture('building2', '/images/building2.png');
+		this.pictures[10] = new Picture('tree1', '/images/tree1.png');
+		this.pictures[11] = new Picture('mountain', '/images/mountain.png');
+		this.pictures[12] = new Picture('selector', '/images/selector.png');
 		
-		// Grass
-		this.grass = new Image();
-		++this.amountOfPictures;
-		this.grass.src = APP_PATH + '/images/grass.png';
-		this.grass.onload = function(){ game.loader.haveLoaded(); }
-		
-		// Water
-		this.water = new Image();
-		++this.amountOfPictures;
-		this.water.src = APP_PATH + '/images/water.png';
-		this.water.onload = function(){ game.loader.haveLoaded(); }
-		
-		// Straight road
-		this.road_straight = new Image();
-		++this.amountOfPictures;
-		this.road_straight.src = APP_PATH + '/images/road_straight.png';
-		this.road_straight.onload = function(){ game.loader.haveLoaded(); }
-		
-		// Intersection of four roads
-		this.road_intersection1 = new Image();
-		++this.amountOfPictures;
-		this.road_intersection1.src = APP_PATH + '/images/road_intersection1.png';
-		this.road_intersection1.onload = function(){ game.loader.haveLoaded(); }
-		
-		// Intersection of three roads
-		this.road_intersection2 = new Image();
-		++this.amountOfPictures;
-		this.road_intersection2.src = APP_PATH + '/images/road_intersection2.png';
-		this.road_intersection2.onload = function(){ game.loader.haveLoaded(); }
-		
-		// Curve road
-		this.road_curve = new Image();
-		++this.amountOfPictures;
-		this.road_curve.src = APP_PATH + '/images/road_curve.png';
-		this.road_curve.onload = function(){ game.loader.haveLoaded(); }
-		
-		// End of the road
-		this.road_end = new Image();
-		++this.amountOfPictures;
-		this.road_end.src = APP_PATH + '/images/road_end.png';
-		this.road_end.onload = function(){ game.loader.haveLoaded(); }
-		
-		// Apartment building
-		this.building1 = new Image();
-		++this.amountOfPictures;
-		this.building1.src = APP_PATH + '/images/building1.gif';
-		this.building1.onload = function(){ game.loader.haveLoaded(); }
-		
-		// House
-		this.building2 = new Image();
-		++this.amountOfPictures;
-		this.building2.src = APP_PATH + '/images/building2.png';
-		this.building2.onload = function(){ game.loader.haveLoaded(); }
-		
-		// Leaf tree
-		this.tree1 = new Image();
-		++this.amountOfPictures;
-		this.tree1.src = APP_PATH + '/images/tree1.png';
-		this.tree1.onload = function(){ game.loader.haveLoaded(); }
-		
-		// Mountain
-		this.mountain = new Image();
-		++this.amountOfPictures;
-		this.mountain.src = APP_PATH + '/images/mountain.png';
-		this.mountain.onload = function(){ game.loader.haveLoaded(); }
-		
-		// Selector
-		this.selector = new Image();
-		++this.amountOfPictures;
-		this.selector.src = APP_PATH + '/images/selector.png';
-		this.selector.onload = function(){ game.loader.haveLoaded(); }
+		for(var i = 0; i < this.pictures.length; ++i) {
+			this.pictures[i].init();
+		}
 	}
 }
 
@@ -166,78 +116,28 @@ function Loader() {
 
 	this.init = function() {
 		// Load map pictures
-		game.map.tilePictures.loadPictures();
+		game.pictures.loadPictures();
 		
 		// Get amount of loadable data
-		this.amountOfLoadable = game.map.tilePictures.amountOfPictures;
+		this.amountOfLoadable = game.pictures.amountOfPictures;
 	}
 }
 
-function Tile() {
-	this.land;
-	this.object;
-	this.coordX = 0;
-	this.coordY = 0;
+function Tile(land, object) {
+	this.land = land;
+	this.object = object;
 	this.terrainCost;
 	this.defenceArea;
 	
-	this.draw = function() {
-	
-		// Draw land or water
-		if(land == 'sand') {
-			ctx.drawImage(game.map.tilePictures.sand, this.coordX, this.coordY);
-		} else if(land == 'grass') {
-			ctx.drawImage(game.map.tilePictures.grass, this.coordX, this.coordY);
-		} else if(land == 'water') {
-			ctx.drawImage(game.map.tilePictures.water, this.coordX, this.coordY);
-		} else {
-			ctx.drawImage(game.map.tilePictures.water, this.coordX, this.coordY);
-		}
-		
-		// Draw buildings, roads, trees and mountains
-		if(object == 'road_straight') {
-			ctx.drawImage(game.map.tilePictures.road_straight, this.coordX, this.coordY);
-		} else if(object == 'road_intersection1') {
-			ctx.drawImage(game.map.tilePictures.road_intersection1, this.coordX, this.coordY);
-		} else if(object == 'road_intersection2') {
-			ctx.drawImage(game.map.tilePictures.road_intersection2, this.coordX, this.coordY);
-		} else if(object == 'road_curve') {
-			ctx.drawImage(game.map.tilePictures.road_curve, this.coordX, this.coordY);
-		} else if(object == 'road_end') {
-			ctx.drawImage(game.map.tilePictures.road_end, this.coordX, this.coordY);
-		} else if(object == 'building1') {
-			ctx.drawImage(game.map.tilePictures.building1, this.coordX, this.coordY);
-		} else if(object == 'building2') {
-			ctx.drawImage(game.map.tilePictures.buildin2, this.coordX, this.coordY);
-		} else if(object == 'tree1') {
-			ctx.drawImage(game.map.tilePictures.tree1, this.coordX, this.coordY);
-		} else if(object == 'mountain') {
-			ctx.drawImage(game.map.tilePictures.mountain, this.coordX, this.coordY);
-		}
-	}
-	
-	this.init = function(initLand, initObject) {
-		this.tilePictures.loadPictures();
-		land = initLand;
-		object = initObject;
-		/*
-		if(objectType == 'building1') {
-			objectImage.src = APP_PATH + '/images/building2.png';
-			var imageData = ctx.getImageData(5, 5, 10, 10);
-			var imageData2 = objectImage.getImageData(5, 5, 49, 49);
-			var data = imageData.data;
-			var data2 = imageData.data;
-			for(var i = 0; i < 2500; ++i) {
-				data[i*4 + 1] = 0;
-				data[i*4 + 2] = 0;
-				data[i*4 + 3] = 0;
-			}
-			ctx.putImageData(imageData, 10, 10);
+	this.draw = function(coordX, coordY) {
+
+		if(this.land != '') {
+			ctx.drawImage(game.pictures.returnPicture(this.land), coordX, coordY);
 		}
 
-		ctx.fillStyle = "#00FF00";
-		ctx.fillRect(50, 50, 50, 50);
-		*/
+		if(this.object != '') {
+			ctx.drawImage(game.pictures.returnPicture(this.object), coordX, coordY);
+		}
 	}
 }
 
@@ -248,11 +148,11 @@ function Node() {
 
 function Map() {
 	this.nodes;
-	this.sizeX = 0;
-	this.sizeY = 0;
-	this.tilePictures = new TilePictures();
+	this.sizeX = 10;
+	this.sizeY = 10;
 	this.locationX = 0;
 	this.locationY = 0;
+	this.tileSize = 50;
 
 	this.draw = function() {
 		
@@ -268,6 +168,113 @@ function Unit() {
 
 	this.draw = function() {
 		
+	}
+}
+
+function Editor() {
+	this.width = 200;
+	this.mod = "editor";
+	
+	// Map creation settings
+	this.minSize = 10;
+	this.maxSize = 100;
+	
+	// Map size button settings
+	this.sizeButtonWidth = 30;
+	this.sizeButtonHeight = 20;
+	this.sizeButtonX = c.width - 130;
+	this.sizeButtonY = 70;
+	this.lowerMinus = 15;
+	
+	// Editor settings
+	this.objects = new Array('sand', 'grass', 'water', 'road_straight', 'building1', 'building2', 'tree1', 'mountain');
+	this.page = 0;
+	this.disBetweenPics = 10;
+	this.editorX = c.width - this.width + 15;
+	this.editorY = 60;
+	this.amountOfObjects = 0;
+
+	this.draw = function() {
+		// Editor bar's background
+		ctx.fillStyle = "#1F7A99";
+		ctx.fillRect(c.width - this.width, 0, this.width, c.height);
+		ctx.strokeStyle = "#000000";
+		ctx.strokeRect(c.width - this.width, 1, this.width - 1, c.height - 2);
+		
+		// Rectangle drawn behind passive mod topic
+		var recX = 0;
+		if(this.mod == "editor") { recX = 100; }
+		ctx.fillStyle = "#13495C";
+		ctx.fillRect(c.width - this.width + recX, 0, this.width - 100, 35);
+		ctx.strokeStyle = "#000000";
+		ctx.strokeRect(c.width - this.width + recX, 1, this.width - 100, 35);
+		
+		// Editor text
+		ctx.font = "18pt Calibri";
+		ctx.fillStyle = "#000000";
+		ctx.fillText( 'Editor', c.width - 190, 25 );
+		
+		// Settings text
+		ctx.font = "18pt Calibri";
+		ctx.fillText( 'Settings', c.width - 90, 25 );
+		
+		// Settings page
+		if(this.mod == "settings") {
+			// Map size text
+			ctx.font = "18pt Calibri";
+			ctx.fillText( 'Map size', c.width - 195, 60 );
+
+			ctx.font = "15pt Calibri";
+
+			ctx.fillText( 'X: ' + game.map.sizeX, c.width - 193, 87 );
+			ctx.fillText( 'Y: ' + game.map.sizeY, c.width - 193, 122 );
+			
+			// Map size buttons
+			for(var i = 0; i < 2; ++i) {
+				ctx.strokeStyle = "#000000";
+				ctx.fillStyle = "#009933";
+				var buttonOffset = i*(this.lowerMinus + this.sizeButtonHeight);
+				ctx.fillRect(this.sizeButtonX, this.sizeButtonY + buttonOffset, this.sizeButtonWidth, this.sizeButtonHeight);
+				ctx.strokeRect(this.sizeButtonX, this.sizeButtonY + buttonOffset, this.sizeButtonWidth, this.sizeButtonHeight);
+				ctx.fillRect(this.sizeButtonX + 30, this.sizeButtonY + buttonOffset, this.sizeButtonWidth, this.sizeButtonHeight);
+				ctx.strokeRect(this.sizeButtonX + 30, this.sizeButtonY + buttonOffset, this.sizeButtonWidth, this.sizeButtonHeight);
+				ctx.fillStyle = "#FF3300";
+				ctx.fillRect(this.sizeButtonX + 60, this.sizeButtonY + buttonOffset, this.sizeButtonWidth, this.sizeButtonHeight);
+				ctx.strokeRect(this.sizeButtonX + 60, this.sizeButtonY + buttonOffset, this.sizeButtonWidth, this.sizeButtonHeight);
+				ctx.fillRect(this.sizeButtonX + 90, this.sizeButtonY + buttonOffset, this.sizeButtonWidth, this.sizeButtonHeight);
+				ctx.strokeRect(this.sizeButtonX + 90, this.sizeButtonY + buttonOffset, this.sizeButtonWidth, this.sizeButtonHeight);
+				ctx.font = "12pt Calibri";
+				ctx.fillStyle = "#000000";
+				ctx.fillText( '+1', this.sizeButtonX + 7, this.sizeButtonY + 15 + buttonOffset );
+				ctx.fillText( '+10', this.sizeButtonX + 3 + 30, this.sizeButtonY + 15 + buttonOffset );
+				ctx.fillText( '-1', this.sizeButtonX + 7 + 60, this.sizeButtonY + 15 + buttonOffset );
+				ctx.fillText( '-10', this.sizeButtonX + 3 + 90, this.sizeButtonY + 15 + buttonOffset );
+			}
+		}
+		
+		// Editor page
+		if(this.mod == "editor") {
+			this.amountOfObjects = this.objects.length - this.page * 9;
+			if(this.amountOfObjects > 9) {
+				this.amountOfObjects = 9;
+			}
+			for(var i = this.page * 9; i < this.page * 9 + this.amountOfObjects; ++i) {
+				if(i < this.amountOfObjects) {
+					var locX = this.editorX + i % 3 * (game.map.tileSize + this.disBetweenPics);
+					var locY = this.editorY + ( (i - i % 3) / 3 ) % 3 * (game.map.tileSize + this.disBetweenPics);
+					ctx.drawImage(game.pictures.returnPicture(this.objects[i]), locX, locY);
+					ctx.strokeRect(locX - 1, locY - 1, game.map.tileSize + 2, game.map.tileSize + 2);
+				}
+			}
+			
+			// Buttons in editor
+			ctx.strokeStyle = "#000000";
+			ctx.font = "15pt Calibri";
+			ctx.strokeRect(this.editorX, this.editorY + 180, 80, 25);
+			ctx.strokeRect(c.width - 95, this.editorY + 180, 80, 25);
+			ctx.strokeRect(this.editorX, this.editorY + 215, 170, 25);
+			ctx.fillText( 'Selector', this.editorX + 50, this.editorY + 235 );
+		}
 	}
 }
 
@@ -305,6 +312,13 @@ function Game() {
 	this.loader = new Loader();
 	this.map = new Map();
 	this.mouse = new MouseEvents();
+	this.pictures = new Pictures();
+	this.editor = new Editor();
+	
+	// Variable that knows what picture should be drawn as a selector
+	this.selector = 'selector';
+	
+	this.mod = 'editor';
 
 	this.draw = function() {
 		// Background
@@ -312,76 +326,238 @@ function Game() {
 		ctx.fillRect(0, 0, c.width, c.height);
 		
 		// Draws sand block, meant for demoing
-		ctx.drawImage(this.map.tilePictures.sand, this.map.locationX + 200, this.map.locationY + 200);
+		ctx.drawImage(this.pictures.returnPicture('sand'), this.map.locationX, this.map.locationY);
+		ctx.drawImage(this.pictures.returnPicture('sand'), this.map.locationX + 500, this.map.locationY + 500);
 		
 		// Draw selector
-		if(!this.mouse.out) {
+		if(!this.mouse.out && !(game.mod == 'editor' && this.mouse.coordX > c.width - this.editor.width - 1)) {
 			var selectorX = this.mouse.coordX - (this.mouse.coordX - this.map.locationX) % 50;
 			var selectorY = this.mouse.coordY - (this.mouse.coordY - this.map.locationY) % 50;
-			ctx.drawImage(this.map.tilePictures.selector, selectorX, selectorY);
+			ctx.drawImage(this.pictures.returnPicture(this.selector), selectorX, selectorY);
+		}
+		
+		if(game.mod == 'editor') {
+			this.editor.draw();
 		}
 	}
 	
 	// Initializes the game
 	this.init = function() {
-		if(gamemod == "editor") {
+		if(game.mod == 'editor') {
 			this.draw();
+		}
+	}
+}
+
+function mouseDragged() {
+	// If mouse is down and mouse moved much enough, map is moved.
+	if(Math.abs(game.mouse.originalX - game.mouse.coordX) + Math.abs(game.mouse.originalY - game.mouse.coordY) > 5) {
+		game.mouse.movedDuringDown = true;
+	}
+
+	// Moving playing area
+	if(game.mouse.movedDuringDown && (game.mod == "play" || (game.mod == "editor" && game.mouse.coordX < c.width - game.editor.width))) {
+		var locX = game.mouse.originalMapX + game.mouse.coordX - game.mouse.originalX;
+		var locY = game.mouse.originalMapY + game.mouse.coordY - game.mouse.originalY;
+			
+		if(locX <= 0) {
+			game.map.locationX = locX;
+		}
+		if(locY <= 0) {
+			game.map.locationY = locY;
 		}
 	}
 }
 
 // Event listener for mouse move
 c.addEventListener('mousemove', function(e) {
+	// Don't do anything if loader isn't ready
+	if(!game.loader.loaded) {
+		return;
+	}
+
 	// Update coordinates in game-class on mouse move.
 	game.mouse.updateCoordinates(e.pageX, e.pageY);
-	
-	if(game.loader.loaded == true) {
-		game.draw();
-		
-		// If mouse is down and mouse moved much enough, map is moved.
-		if(game.mouse.down) {
-			if(Math.abs(game.mouse.originalX - game.mouse.coordX) + Math.abs(game.mouse.originalY - game.mouse.coordY) > 10) {
-				game.mouse.movedDuringDown = true;
-			}
-			if(game.mouse.movedDuringDown) {
-				game.map.locationX = game.mouse.originalMapX + game.mouse.coordX - game.mouse.originalX;
-				game.map.locationY = game.mouse.originalMapY + game.mouse.coordY - game.mouse.originalY;
-			}
-		}
+
+	if(game.mouse.down) {
+		mouseDragged();
 	}
+	
+	game.draw();
 });
 
 // Event listener for mouse down
 c.addEventListener('mousedown', function(e) {
-	if(game.loader.loaded == true) {
-		game.mouse.down = true;
-		game.mouse.originalX = game.mouse.coordX;
-		game.mouse.originalY = game.mouse.coordY;
-		game.mouse.originalMapX = game.map.locationX;
-		game.mouse.originalMapY = game.map.locationY;
-		game.mouse.wasPressedDown(e.pageX, e.pageY);
-		game.mouse.movedDuringDown = false;
+	// Don't do anything if loader isn't ready
+	if(!game.loader.loaded) {
+		return;
 	}
+
+	game.mouse.down = true;
+	game.mouse.originalX = game.mouse.coordX;
+	game.mouse.originalY = game.mouse.coordY;
+	game.mouse.originalMapX = game.map.locationX;
+	game.mouse.originalMapY = game.map.locationY;
+	game.mouse.wasPressedDown(e.pageX, e.pageY);
+	game.mouse.movedDuringDown = false;
 });
+
+function mapSizeButtonEvents() {
+	// If mouse is too much left or right, button was not pressed.
+	if(game.mouse.coordX < game.editor.sizeButtonX || game.mouse.coordX > game.editor.sizeButtonX + game.editor.sizeButtonWidth * 4) {
+		return;
+	}
+	
+	// If mouse is too high of too low, button was not pressed.
+	if(game.mouse.coordY < game.editor.sizeButtonY || game.mouse.coordY > game.editor.sizeButtonY + game.editor.sizeButtonHeight * 2 + game.editor.lowerMinus) {
+		return
+	}
+	
+	// Map X size buttons
+	if(game.mouse.coordY < game.editor.sizeButtonY + game.editor.sizeButtonHeight) {
+		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth) { // +1
+			if(game.map.sizeX + 1 <= game.editor.maxSize) {
+				++game.map.sizeX;
+			}
+			return;
+		}
+		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth * 2) { // +10
+			if(game.map.sizeX + 10 <= game.editor.maxSize) {
+				game.map.sizeX = game.map.sizeX + 10;
+			} else {
+				game.map.sizeX = game.editor.maxSize;
+			}
+			return;
+		}
+		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth * 3) { // -1
+			if(game.map.sizeX - 1 >= game.editor.minSize) {
+				--game.map.sizeX;
+			}
+			return;
+		}
+		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth * 4) { // -10
+			if(game.map.sizeX - 10 >= game.editor.minSize) {
+				game.map.sizeX = game.map.sizeX - 10;
+			} else {
+				game.map.sizeX = game.editor.minSize;
+			}
+			return;
+		}
+	}
+	
+	// Map Y size buttons
+	if(game.mouse.coordY > game.editor.sizeButtonY + game.editor.sizeButtonHeight + game.editor.lowerMinus) {
+		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth) { // +1
+			if(game.map.sizeY + 1 <= game.editor.maxSize) {
+				++game.map.sizeY;
+			}
+			return;
+		}
+		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth * 2) { // +10
+			if(game.map.sizeY + 10 <= game.editor.maxSize) {
+				game.map.sizeY = game.map.sizeY + 10;
+			} else {
+				game.map.sizeY = game.editor.maxSize;
+			}
+			return;
+		}
+		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth * 3) { // -1
+			if(game.map.sizeY - 1 >= game.editor.minSize) {
+				--game.map.sizeY;
+			}
+			return;
+		}
+		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth * 4) { // -10
+			if(game.map.sizeY - 10 >= game.editor.minSize) {
+				game.map.sizeY = game.map.sizeY - 10;
+			} else {
+				game.map.sizeY = game.editor.minSize;
+			}
+			return;
+		}
+	}
+}
+
+// Chooses the object that will be added to map
+function chooseEditorElement() {
+	for(var i = game.editor.page * 9; i < game.editor.page * 9 + game.editor.amountOfObjects; ++i) {
+		if(i < game.editor.amountOfObjects) {
+			var locX = game.editor.editorX + i % 3 * (game.map.tileSize + game.editor.disBetweenPics);
+			var locY = game.editor.editorY + ( (i - i % 3) / 3 ) % 3 * (game.map.tileSize + game.editor.disBetweenPics);
+			
+			if(game.mouse.coordX > locX && game.mouse.coordX < locX + game.map.tileSize
+						&& game.mouse.coordY > locY && game.mouse.coordY < locY + game.map.tileSize) {
+				game.selector = game.editor.objects[i];
+			}
+			
+			ctx.drawImage(game.pictures.returnPicture(game.editor.objects[i]), locX, locY);
+			ctx.strokeRect(locX - 1, locY - 1, game.map.tileSize + 2, game.map.tileSize + 2);
+		}
+	}
+	
+	// Select selector
+	if(game.mouse.coordX > game.editor.editorX && game.mouse.coordX < game.editor.editorX + 170
+						&& game.mouse.coordY > game.editor.editorY + 215 && game.mouse.coordY < game.editor.editorY + 240) {
+		game.selector = "selector";			
+	}
+}
 
 // Event listener for mouse up
 c.addEventListener('mouseup', function(e) {
-	if(game.loader.loaded == true) {
-		game.mouse.down = false;
+	// Do nothing if loader isn't ready
+	if(!game.loader.loaded) {
+		return;
 	}
+	
+	game.mouse.down = false;
+	
+	// Do nothing if mouse was dragged
+	if(game.mouse.movedDuringDown) {
+		return;
+	}
+	
+	// In editor change between settings and editor
+	if(game.mod == "editor" && game.mouse.coordY < 35 && game.mouse.coordX > c.width - game.editor.width) {
+		if(game.mouse.coordX < c.width - 100) {
+			game.editor.mod = "editor";
+		} else {
+			game.editor.mod = "settings";
+			game.selector = "selector";
+		}
+	}
+	
+	// Set map size in map settings
+	if(game.mod == "editor" && game.editor.mod == "settings") {
+		mapSizeButtonEvents();
+	}
+	
+	// Edit map elements
+	if(game.mod == "editor" && game.editor.mod == "editor") {
+		chooseEditorElement();
+	}
+	
+	game.draw();
 });
 
 // Event listener for mouse out
 c.addEventListener('mouseout', function(e) {
-	if(game.loader.loaded == true) {
-		game.mouse.out = true;
-		game.draw();
+
+	// Don't do anything if loader isn't ready
+	if(!game.loader.loaded) {
+		return;
 	}
+	
+	game.mouse.out = true;
+	game.mouse.down = false;
+	game.draw();
 });
 
 // Event listener for mouse over
 c.addEventListener('mouseover', function(e) {
-	if(game.loader.loaded == true) {
-		game.mouse.out = false;
+	// Don't do anything if loader isn't ready
+	if(!game.loader.loaded) {
+		return;
 	}
+	
+	game.mouse.out = false;
 });
