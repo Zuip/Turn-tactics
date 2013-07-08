@@ -108,7 +108,6 @@ function setPageContent(page) {
 
 function completePageChange(page, data) {
 
-	alert(data.toSource());
 	$("#status").html(components["status"].render(data));
 	$("#login").html(components["logininfo"].render(data));
 	$("#navigation").html(components["navigation"].render(data));
