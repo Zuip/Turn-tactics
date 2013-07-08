@@ -65,7 +65,7 @@ chat = {
 		this.socket.on('messageDelivered', function(channel, status){
 			self.chatInputText.attr("disabled", false);
 			if (status == true) {
-				self.messages[channel].push({sender: this.username, msg: self.chatInputText.val()});
+				self.messages[channel].push({type: "normal", sender: self.username, msg: self.chatInputText.val()});
 				if (channel == self.currentChannel) {
 					self.updateMessageList(channel);
 				}
@@ -249,6 +249,8 @@ chat = {
 	
 	// Create the graphic elements of the chat
 	createChatUI: function() {
+		var self = this;
+		
 		var chatDiv = $('#chat');
 		$('#chat').empty();
 		
@@ -295,7 +297,8 @@ chat = {
 	
 	// Context menus
 	createContextMenus: function() {
-			$.contextMenu(
+		var self = this;
+		$.contextMenu(
 			{
 				selector: '.chatuser:not(.chat_userself)', 
 				build: function($trigger) {

@@ -102,7 +102,7 @@ module.exports = function(io, pool) {
 					socket.emit('messageDelivered', channel, false);
 				} else {
 					socket.emit('messageDelivered', channel, true);
-					socket.broadcast.to(channel).emit('chatMessage', channel, getUser(socket).username, message);
+					socket.broadcast.to(channel).emit('chatMessage', channel, getUser(socket), message);
 				}
 			} else {
 				// not on channel
