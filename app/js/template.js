@@ -7,21 +7,19 @@ var History = window.History;
 
 // Precompile
 for (var page in pages) {
-	templates[page] = new EJS({url: APP_PATH+'/app/templates/' + page});
+	//templates[page] = new EJS({url: APP_PATH+'/app/templates/' + page});
+	templates[page] = $.get(APP_PATH+'/app/templates/' + page +'.ejs',{} ,function(){},'view');
 }
+
+/*
 components["status"] = new EJS({url: APP_PATH+'/app/templates/status.ejs'});
 components["logininfo"] = new EJS({url: APP_PATH+'/app/templates/logininfo.ejs'});
 components["navigation"] = new EJS({url: APP_PATH+'/app/templates/navigation.ejs'});
+*/
 
-function loadFile(page) {
-	$.ajax({
-        url: APP_PATH+'/app/templates/'+page+'.js',
-            cache: true,
-            success: function(data) {
-				callback(page, data);
-			},
-    });
-}
+components["status"] = $.get(APP_PATH+'/app/templates/status.ejs' ,{} ,function(){},'view');
+components["logininfo"] = $.get(APP_PATH+'/app/templates/logininfo.ejs' ,{} ,function(){},'view');
+components["navigation"] = $.get(APP_PATH+'/app/templates/navigation.ejs' ,{} ,function(){},'view');
 
 function updateLinks() {
 	
@@ -108,11 +106,11 @@ function setPageContent(page) {
 
 function completePageChange(page, data) {
 
-	$("#status").html(components["status"].render(data));
-	$("#login").html(components["logininfo"].render(data));
-	$("#navigation").html(components["navigation"].render(data));
-	var view = templates[page].render(data);
-	$("#main").html(view);
+	$('#status').html(APP_PATH+'/app/templates/status.ejs', data);
+	$('#login').html(APP_PATH+'/app/templates/logininfo.ejs', data);
+	$('#navigation').html(APP_PATH+'/app/templates/navigation.ejs', data);
+	
+	$("#main").html(APP_PATH+'/app/templates/'+page+'.ejs', data);
 	updateLinks();
 	currentPage = page;
 	if (firstInit == false) {
