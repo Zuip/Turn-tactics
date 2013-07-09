@@ -25,10 +25,9 @@ chat = {
 	
 	init: function() {
 		var self = this;
+		this.createChatUI();
+		this.createContextMenus();
 		if (this.connected == false) {
-		
-			this.createChatUI();
-			this.createContextMenus();
 		
 			this.socket = io.connect("http://"+window.location.host);
 			this.socket.on('connect', function() {
