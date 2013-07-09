@@ -1,6 +1,9 @@
 var c = document.getElementById("gameArea");
 var ctx = c.getContext("2d");
 
+ctx.canvas.width = document.getElementById("main").offsetWidth;
+ctx.canvas.height = document.getElementById("main").offsetWidth * (9/16);
+
 var game = new Game();
 game.loader.init();
 
@@ -141,9 +144,13 @@ function Tile(land, object) {
 	}
 }
 
-function Node() {
+function Node(land, object) {
 	this.unit;
-	this.tile;
+	this.tile = new Tile(land, object);
+	
+	this.draw = function(coordX, coordY) {
+		this.tile.draw(coordX, coordY);
+	}
 }
 
 function Map() {
@@ -195,6 +202,10 @@ function Editor() {
 	this.amountOfObjects = 0;
 
 	this.draw = function() {
+		// Update needed information in case of window resize
+		this.sizeButtonX = c.width - 130;
+		this.editorX = c.width - this.width + 15;
+	
 		// Editor bar's background
 		ctx.fillStyle = "#1F7A99";
 		ctx.fillRect(c.width - this.width, 0, this.width, c.height);
@@ -371,6 +382,8 @@ function mouseDragged() {
 
 // Event listener for mouse move
 c.addEventListener('mousemove', function(e) {
+	e.preventDefault();
+
 	// Don't do anything if loader isn't ready
 	if(!game.loader.loaded) {
 		return;
@@ -384,10 +397,14 @@ c.addEventListener('mousemove', function(e) {
 	}
 	
 	game.draw();
+	
+	return;
 });
 
 // Event listener for mouse down
 c.addEventListener('mousedown', function(e) {
+	e.preventDefault();
+
 	// Don't do anything if loader isn't ready
 	if(!game.loader.loaded) {
 		return;
@@ -400,6 +417,8 @@ c.addEventListener('mousedown', function(e) {
 	game.mouse.originalMapY = game.map.locationY;
 	game.mouse.wasPressedDown(e.pageX, e.pageY);
 	game.mouse.movedDuringDown = false;
+	
+	return;
 });
 
 function mapSizeButtonEvents() {
@@ -560,4 +579,22 @@ c.addEventListener('mouseover', function(e) {
 	}
 	
 	game.mouse.out = false;
+});
+/*
+window.addEventListener("resize",function(){
+	ctx.canvas.width = document.getElementById("main").offsetWidth;
+	ctx.canvas.height = document.getElementById("main").offsetWidth * (9/16);
+});
+
+window.onResize(function(){
+	ctx.canvas.width = document.getElementById("main").offsetWidth;
+	ctx.canvas.height = document.getElementById("main").offsetWidth * (9/16);
+});
+*/
+$(window).resize(function(){
+	ctx.canvas.width = document.getElementById("main").offsetWidth;
+	ctx.canvas.height = document.getElementById("main").offsetWidth * (9/16);
+	
+	console.log(ctx.canvas.width);
+	console.log(ctx.canvas.height);
 });
