@@ -39,7 +39,6 @@ chat = require('./modules/chat')(io, pool);
 // modify JSON data to be passed to front-end according to POST data
 app.handlePostQueries = function(req, res, data){
 	if(typeof req.body.register != "undefined") {
-		// console.log('rekisterointi');
 		sessions.handleRegisterPost(req, res, data, pool, function() {
 			app.renderPage(res, "register", data);
 		});
@@ -153,11 +152,15 @@ app.configure(function(){
 		app.sendPage(req, res, data);
 	});
 	app.get(APP_PATH+'/:id', function(req, res){
-		// regular page
-		sessions.handlePage(req, res, pool, data, function() {
-			//last param tells to send ajax data
-			sendPageContent(req, res, data, false);
-		});
+		/* Do not process user data when getting favicon.ico
+		 * Some browsers try to get favicon.ico even with every ajax request */
+		if (req.params.id != "favicon.ico") {
+			// regular page
+			sessions.handlePage(req, res, pool, data, function() {
+				//last param tells to send ajax data
+				sendPageContent(req, res, data, false);
+			});
+		}
 	});
 	// serve images and css file directly
 	app.use(APP_PATH+"/images", express.static(__dirname + '/images'));
