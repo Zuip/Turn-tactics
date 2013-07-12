@@ -7,11 +7,11 @@ ctx.canvas.height = document.getElementById("main").offsetWidth * (9/16);
 var game = new Game();
 game.loader.init();
 
-function Picture(name, pictureAddress) {
+function Picture(name, type, pictureAddress) {
 	this.name = name;
 	this.pictureAddress = pictureAddress;
 	this.image;
-	this.type;
+	this.type = type;
 
 	this.init = function() {
 		++game.pictures.amountOfPictures;
@@ -36,21 +36,29 @@ function Pictures() {
 		}
 	}
 	
+	this.returnData = function(name) {
+		for(var i = 0; i < this.pictures.length; ++i) {
+			if(this.pictures[i].name == name) {
+				return this.pictures[i];
+			}
+		}
+	}
+	
 	this.loadPictures = function() {
 	
-		this.pictures[0] = new Picture('sand', '/images/sand.png');
-		this.pictures[1] = new Picture('grass', '/images/grass.png');
-		this.pictures[2] = new Picture('water', '/images/water.png');
-		this.pictures[3] = new Picture('road_straight', '/images/road_straight.png');
-		this.pictures[4] = new Picture('road_intersection1', '/images/road_intersection1.png');
-		this.pictures[5] = new Picture('road_intersection2', '/images/road_intersection2.png');
-		this.pictures[6] = new Picture('road_curve', '/images/road_curve.png');
-		this.pictures[7] = new Picture('road_end', '/images/road_end.png');
-		this.pictures[8] = new Picture('building1', '/images/building1.gif');
-		this.pictures[9] = new Picture('building2', '/images/building2.png');
-		this.pictures[10] = new Picture('tree1', '/images/tree1.png');
-		this.pictures[11] = new Picture('mountain', '/images/mountain.png');
-		this.pictures[12] = new Picture('selector', '/images/selector.png');
+		this.pictures[0] = new Picture('sand', 'land', '/images/sand.png');
+		this.pictures[1] = new Picture('grass', 'land', '/images/grass.png');
+		this.pictures[2] = new Picture('water', 'land', '/images/water.png');
+		this.pictures[3] = new Picture('road_straight', 'object', '/images/road_straight.png');
+		this.pictures[4] = new Picture('road_intersection1', 'object', '/images/road_intersection1.png');
+		this.pictures[5] = new Picture('road_intersection2', 'object', '/images/road_intersection2.png');
+		this.pictures[6] = new Picture('road_curve', 'object', '/images/road_curve.png');
+		this.pictures[7] = new Picture('road_end', 'object', '/images/road_end.png');
+		this.pictures[8] = new Picture('building1', 'object', '/images/building1.gif');
+		this.pictures[9] = new Picture('building2', 'object', '/images/building2.png');
+		this.pictures[10] = new Picture('tree1', 'object', '/images/tree1.png');
+		this.pictures[11] = new Picture('mountain', 'object', '/images/mountain.png');
+		this.pictures[12] = new Picture('selector', 'object', '/images/selector.png');
 		
 		for(var i = 0; i < this.pictures.length; ++i) {
 			this.pictures[i].init();
@@ -149,24 +157,88 @@ function Node(land, object) {
 	this.tile = new Tile(land, object);
 	
 	this.draw = function(coordX, coordY) {
+		console.log(coordX + " " + coordY);
 		this.tile.draw(coordX, coordY);
 	}
 }
 
 function Map() {
 	this.nodes;
-	this.sizeX = 10;
-	this.sizeY = 10;
+	this.sizeX;
+	this.sizeY;
 	this.locationX = 0;
 	this.locationY = 0;
 	this.tileSize = 50;
-
-	this.draw = function() {
+	
+	this.updateXSize = function(size) {
+		// New X size is bigger, create new nodes
+		if(size > this.sizeX) {
+			var sizeDif = size - this.sizeX;
+			for(var i = this.sizeX; i < size; ++i) {
+				this.nodes[i] = new Array();
+				
+				for(var j = 0; j < this.sizeY; ++j) {
+					this.nodes[i][j] = new Node("water", "");
+				}
+			}
+		}
 		
+		// Always update size
+		this.sizeX = size;
 	}
 	
-	this.init = function() {
+	this.updateYSize = function(size) {
+		// New Y size is bigger, create new nodes
+		if(size > this.sizeY) {
+			var sizeDif = size - this.sizeY;
+			for(var i = 0; i < this.sizeX; ++i) {
+				for(var j = this.sizeY; j < size; ++j) {
+					this.nodes[i][j] = new Node("water", "");
+				}
+			}
+		}
 		
+		// Always update size
+		this.sizeY = size;
+	}
+	
+	this.addElement = function(mouseX, mouseY, element) {
+		nodeX = ( mouseX + this.locationX - ( mouseX + this.locationX ) % 50 ) / 50;
+		nodeY = ( mouseY + this.locationY - ( mouseY + this.locationY ) % 50 ) / 50;
+		
+		if(nodeX < this.sizeX && nodeY < this.sizeY) {
+			elementData = game.pictures.returnData(element);
+			if(elementData.type == 'land') {
+				this.nodes[nodeX][nodeY].tile.land = element;
+			}
+			
+			else if(elementData.type == 'object') {
+				this.nodes[nodeX][nodeY].tile.object = element;
+			}
+		}
+	}
+
+	this.draw = function() {
+		for(var i = 0; i < this.sizeX; ++i) {
+			for(var j = 0; j < this.sizeY; ++j) {
+				this.nodes[i][j].draw(this.locationX + i * this.tileSize, this.locationY + j * this.tileSize);
+			}
+		}
+	}
+	
+	this.init = function(sizeX, sizeY) {
+		this.sizeX = sizeX;
+		this.sizeY = sizeY;
+	
+		// Initialize nodes
+		this.nodes = new Array();
+		for(var i = 0; i < this.sizeX; ++i) {
+			this.nodes[i] = new Array();
+			
+			for(var j = 0; j < this.sizeY; ++j) {
+				this.nodes[i][j] = new Node("sand", "");
+			}
+		}
 	}
 }
 
@@ -243,23 +315,23 @@ function Editor() {
 			// Map size buttons
 			for(var i = 0; i < 2; ++i) {
 				ctx.strokeStyle = "#000000";
-				ctx.fillStyle = "#009933";
+				ctx.fillStyle = "#FF3300";
 				var buttonOffset = i*(this.lowerMinus + this.sizeButtonHeight);
 				ctx.fillRect(this.sizeButtonX, this.sizeButtonY + buttonOffset, this.sizeButtonWidth, this.sizeButtonHeight);
 				ctx.strokeRect(this.sizeButtonX, this.sizeButtonY + buttonOffset, this.sizeButtonWidth, this.sizeButtonHeight);
 				ctx.fillRect(this.sizeButtonX + 30, this.sizeButtonY + buttonOffset, this.sizeButtonWidth, this.sizeButtonHeight);
 				ctx.strokeRect(this.sizeButtonX + 30, this.sizeButtonY + buttonOffset, this.sizeButtonWidth, this.sizeButtonHeight);
-				ctx.fillStyle = "#FF3300";
+				ctx.fillStyle = "#009933";
 				ctx.fillRect(this.sizeButtonX + 60, this.sizeButtonY + buttonOffset, this.sizeButtonWidth, this.sizeButtonHeight);
 				ctx.strokeRect(this.sizeButtonX + 60, this.sizeButtonY + buttonOffset, this.sizeButtonWidth, this.sizeButtonHeight);
 				ctx.fillRect(this.sizeButtonX + 90, this.sizeButtonY + buttonOffset, this.sizeButtonWidth, this.sizeButtonHeight);
 				ctx.strokeRect(this.sizeButtonX + 90, this.sizeButtonY + buttonOffset, this.sizeButtonWidth, this.sizeButtonHeight);
 				ctx.font = "12pt Calibri";
 				ctx.fillStyle = "#000000";
-				ctx.fillText( '+1', this.sizeButtonX + 7, this.sizeButtonY + 15 + buttonOffset );
-				ctx.fillText( '+10', this.sizeButtonX + 3 + 30, this.sizeButtonY + 15 + buttonOffset );
-				ctx.fillText( '-1', this.sizeButtonX + 7 + 60, this.sizeButtonY + 15 + buttonOffset );
-				ctx.fillText( '-10', this.sizeButtonX + 3 + 90, this.sizeButtonY + 15 + buttonOffset );
+				ctx.fillText( '-10', this.sizeButtonX + 4, this.sizeButtonY + 15 + buttonOffset );
+				ctx.fillText( '-1', this.sizeButtonX + 8 + 30, this.sizeButtonY + 15 + buttonOffset );
+				ctx.fillText( '+1', this.sizeButtonX + 7 + 60, this.sizeButtonY + 15 + buttonOffset );
+				ctx.fillText( '+10', this.sizeButtonX + 3 + 90, this.sizeButtonY + 15 + buttonOffset );
 			}
 		}
 		
@@ -336,10 +408,9 @@ function Game() {
 		ctx.fillStyle = "#308ED3";
 		ctx.fillRect(0, 0, c.width, c.height);
 		
-		// Draws sand block, meant for demoing
-		ctx.drawImage(this.pictures.returnPicture('sand'), this.map.locationX, this.map.locationY);
-		ctx.drawImage(this.pictures.returnPicture('sand'), this.map.locationX + 500, this.map.locationY + 500);
-		
+		// Draw map
+		this.map.draw();
+
 		// Draw selector
 		if(!this.mouse.out && !(game.mod == 'editor' && this.mouse.coordX > c.width - this.editor.width - 1)) {
 			var selectorX = this.mouse.coordX - (this.mouse.coordX - this.map.locationX) % 50;
@@ -354,9 +425,11 @@ function Game() {
 	
 	// Initializes the game
 	this.init = function() {
-		if(game.mod == 'editor') {
-			this.draw();
-		}
+		var mapSizeX = 10;
+		var mapSizeY = 10;
+		this.map.init(mapSizeX, mapSizeY);
+		
+		this.draw();
 	}
 }
 
@@ -434,31 +507,31 @@ function mapSizeButtonEvents() {
 	
 	// Map X size buttons
 	if(game.mouse.coordY < game.editor.sizeButtonY + game.editor.sizeButtonHeight) {
-		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth) { // +1
-			if(game.map.sizeX + 1 <= game.editor.maxSize) {
-				++game.map.sizeX;
-			}
-			return;
-		}
-		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth * 2) { // +10
-			if(game.map.sizeX + 10 <= game.editor.maxSize) {
-				game.map.sizeX = game.map.sizeX + 10;
-			} else {
-				game.map.sizeX = game.editor.maxSize;
-			}
-			return;
-		}
-		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth * 3) { // -1
-			if(game.map.sizeX - 1 >= game.editor.minSize) {
-				--game.map.sizeX;
-			}
-			return;
-		}
-		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth * 4) { // -10
+		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth) { // - 10
 			if(game.map.sizeX - 10 >= game.editor.minSize) {
-				game.map.sizeX = game.map.sizeX - 10;
+				game.map.updateXSize(game.map.sizeX - 10);
 			} else {
-				game.map.sizeX = game.editor.minSize;
+				game.map.updateXSize(game.editor.minSize);
+			}
+			return;
+		}
+		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth * 2) { // -1
+			if(game.map.sizeX - 1 >= game.editor.minSize) {
+				game.map.updateXSize(game.map.sizeX - 1);
+			}
+			return;
+		}
+		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth * 3) { // +1
+			if(game.map.sizeX + 1 <= game.editor.maxSize) {
+				game.map.updateXSize(game.map.sizeX + 1);
+			}
+			return;
+		}
+		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth * 4) { // +10
+			if(game.map.sizeX + 10 <= game.editor.maxSize) {
+				game.map.updateXSize(game.map.sizeX + 10);
+			} else {
+				game.map.updateXSize(game.editor.maxSize);
 			}
 			return;
 		}
@@ -466,31 +539,31 @@ function mapSizeButtonEvents() {
 	
 	// Map Y size buttons
 	if(game.mouse.coordY > game.editor.sizeButtonY + game.editor.sizeButtonHeight + game.editor.lowerMinus) {
-		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth) { // +1
-			if(game.map.sizeY + 1 <= game.editor.maxSize) {
-				++game.map.sizeY;
-			}
-			return;
-		}
-		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth * 2) { // +10
-			if(game.map.sizeY + 10 <= game.editor.maxSize) {
-				game.map.sizeY = game.map.sizeY + 10;
-			} else {
-				game.map.sizeY = game.editor.maxSize;
-			}
-			return;
-		}
-		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth * 3) { // -1
-			if(game.map.sizeY - 1 >= game.editor.minSize) {
-				--game.map.sizeY;
-			}
-			return;
-		}
-		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth * 4) { // -10
+		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth) { // -10
 			if(game.map.sizeY - 10 >= game.editor.minSize) {
-				game.map.sizeY = game.map.sizeY - 10;
+				game.map.updateYSize(game.map.sizeY - 10);
 			} else {
-				game.map.sizeY = game.editor.minSize;
+				game.map.updateYSize(game.editor.minSize);
+			}
+			return;
+		}
+		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth * 2) { // -1
+			if(game.map.sizeY - 1 >= game.editor.minSize) {
+				game.map.updateYSize(game.map.sizeY - 1);
+			}
+			return;
+		}
+		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth * 3) { // +1
+			if(game.map.sizeY + 1 <= game.editor.maxSize) {
+				game.map.updateYSize(game.map.sizeY + 1);
+			}
+			return;
+		}
+		if(game.mouse.coordX < game.editor.sizeButtonX + game.editor.sizeButtonWidth * 4) { // +10
+			if(game.map.sizeY + 10 <= game.editor.maxSize) {
+				game.map.updateYSize(game.map.sizeY + 10);
+			} else {
+				game.map.updateYSize(game.editor.maxSize);
 			}
 			return;
 		}
@@ -528,6 +601,7 @@ c.addEventListener('mouseup', function(e) {
 		return;
 	}
 	
+	// Mouse is not down.
 	game.mouse.down = false;
 	
 	// Do nothing if mouse was dragged
@@ -553,6 +627,11 @@ c.addEventListener('mouseup', function(e) {
 	// Edit map elements
 	if(game.mod == "editor" && game.editor.mod == "editor") {
 		chooseEditorElement();
+	}
+	
+	// Add new elements to map
+	if(game.mod == "editor" && game.editor.mod == "editor" && game.selector != "selector" && game.mouse.coordX < c.width - game.editor.width) {
+		game.map.addElement(game.mouse.coordX, game.mouse.coordY, game.selector);
 	}
 	
 	game.draw();
@@ -594,7 +673,4 @@ window.onResize(function(){
 $(window).resize(function(){
 	ctx.canvas.width = document.getElementById("main").offsetWidth;
 	ctx.canvas.height = document.getElementById("main").offsetWidth * (9/16);
-	
-	console.log(ctx.canvas.width);
-	console.log(ctx.canvas.height);
 });
