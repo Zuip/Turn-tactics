@@ -111,6 +111,22 @@ app.sendPage = function(req, res, data) {
 	app.renderPage(res, page, data);
 }
 
+// Serves files with correct mime types
+// Express.js static did not set mime types correctly
+app.serveFiles = function(req, res, directory) {
+	fs.readFile(directory + "/" + req.params.file, function(err, data) {
+		if(err) {
+			res.status(404);
+			res.render('views/404', { url: req.url });
+		} else {
+			// set the content type based on the file
+			res.contentType(req.params.file);
+			res.send(data);
+		}   
+		res.end();
+	}); 
+}
+
 // Http
 app.configure(function(){
 	
@@ -151,7 +167,7 @@ app.configure(function(){
 	app.get(APP_PATH+'/', function(req, res){
 		app.sendPage(req, res, data);
 	});
-	app.get(APP_PATH+'/:id', function(req, res){
+	app.get(APP_PATH+'/:id', function(req, res, next){
 		/* Do not process user data when getting favicon.ico
 		 * Some browsers try to get favicon.ico even with every ajax request */
 		if (req.params.id != "favicon.ico") {
@@ -160,20 +176,41 @@ app.configure(function(){
 				//last param tells to send ajax data
 				sendPageContent(req, res, data, false);
 			});
+		} else {
+			next();
 		}
 	});
-	// serve images and css file directly
-	app.use(APP_PATH+"/images", express.static(__dirname + '/images'));
-	app.use(APP_PATH+"/app", express.static(__dirname + '/app'));
+	// serve images
+	app.get(APP_PATH+"/images/:file", function(req, res) {
+		app.serveFiles(req, res, "images");
+	});
+	// style.css
+	app.get(APP_PATH+"/app/:file", function(req, res) {
+		app.serveFiles(req, res, "app");
+	});
 	// serve front-end js directly
-	app.use(APP_PATH+"/app/js", express.static(__dirname + '/app/js'));
+	app.get(APP_PATH+"/app/js/:file", function(req, res) {
+		app.serveFiles(req, res, "app/js");
+	});
+	app.get(APP_PATH+"/app/templates/:file", function(req, res) {
+		app.serveFiles(req, res, "app/templates");
+	});
 	// serve controllers directly
-	app.use(APP_PATH+"/app/controllers", express.static(__dirname + '/app/controllers'));
+	app.get(APP_PATH+"/app/controllers/:file", function(req, res) {
+		app.serveFiles(req, res, "app/controllers");
+	});
+	// serve language files directly
+	app.get(APP_PATH+"/app/language/:file", function(req, res) {
+		app.serveFiles(req, res, "app/language");
+	});
 	// serve view directly
-	app.use(APP_PATH+"/app/views", express.static(__dirname + '/app/views'));
+	app.get(APP_PATH+"/app/views/:file", function(req, res) {
+		app.serveFiles(req, res, "app/views");
+	});
 	
 	//None of the other rules applied
 	app.use(function(req, res, next) {
+		res.status(404);
 		res.render('views/404', { url: req.url });
 	});
 
