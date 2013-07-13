@@ -51,7 +51,9 @@ $(function() {
 	if (History.enabled) {
 		window.History.Adapter.bind(window, 'statechange', function() {
 			var state = History.getState();
-			setPageContent(state.data.page);
+			if (firstInit == false) {
+				setPageContent(state.data.page);
+			}
 		});
 	}
 
