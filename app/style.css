@@ -236,6 +236,10 @@ h3 {
 	border-top: 1px solid #000;
 }
 
+#chatInputText {
+	width: 50%;
+}
+
 #footer {
 	border-top: 1px solid #000;
 	text-align: center;

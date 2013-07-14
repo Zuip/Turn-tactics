@@ -8,6 +8,7 @@ chat = {
 	userList: null,
 	chatInput: null,
 	chatInputText: null,
+	chatInputButton: null,
 	
 	currentChannel: "",
 	// list of channels the user is currently on
@@ -304,6 +305,14 @@ chat = {
 			self.chatInputText.attr("disabled", true);
 		}
 		
+		this.chatInputButton = $('<input>', { type: 'button',
+		id: 'chatInputButton',
+		value: 'Send'
+		}).appendTo(this.chatInput);
+		this.chatInputButton.on("click", function() {
+			self.sendMessage();
+		});
+		
 		this.updateTabs();
 		if (this.currentChannel != "") {
 			this.changeTab(this.currentChannel, true);
@@ -513,6 +522,7 @@ chat = {
 		if (typeof this.messages[channel] == "undefined") {
 			this.messages[channel] = new Array();
 		}
+		data.time = new Date();
 		this.messages[channel].push(data);
 	},
 	
@@ -520,7 +530,7 @@ chat = {
 		if (typeof this.messages[channel] == "undefined") {
 			this.messages[channel] = new Array();
 		}
-		this.messages[channel].push({sender: sender, msg: message, type: type});
+		this.messages[channel].push({time: new Date(), sender: sender, msg: message, type: type});
 	},
 	
 	isScrollOnBottom: function(element) {
@@ -596,40 +606,43 @@ chat = {
 		$('#msgWindow').empty();
 		if (typeof this.messages[channel] != 'undefined') {
 			for (var i=0; i<this.messages[channel].length; ++i) {
+				var time = "["+this.messages[channel][i].time.getHours() + ":"
+							+ this.messages[channel][i].time.getMinutes()+"] ";
+							
 				if (this.messages[channel][i].type == "normal") {
 					var message = $('<div>', {
-					text: this.messages[channel][i].sender+": "+this.messages[channel][i].msg
+					text: time + this.messages[channel][i].sender+": "+this.messages[channel][i].msg
 					}).appendTo(this.msgWindow);
 				} else if (this.messages[channel][i].type == "notice") {
 					var message = $('<div>', {
-					text: this.messages[channel][i].msg
+					text: time + this.messages[channel][i].msg
 					}).appendTo(this.msgWindow);
 				} else if (this.messages[channel][i].type == "challenge") {
 					var message = $('<div>', {
-					text: this.messages[channel][i].challenger + " has challenged you",
+					text: time + this.messages[channel][i].challenger + " has challenged you",
 					class: "challenge",
 					}).appendTo(this.msgWindow);
 					message.data("challenger", this.messages[channel][i].challenger);
 					message.data("key", this.messages[channel][i].key);
 				} else if (this.messages[channel][i].type == "challengeCancelled") {
 					var message = $('<div>', {
-					text: this.messages[channel][i].participant + " cancelled the challenge",
+					text: time + this.messages[channel][i].participant + " cancelled the challenge",
 					}).appendTo(this.msgWindow);
 				} else if (this.messages[channel][i].type == "invitationCancelled") {
 					var message = $('<div>', {
-					text: this.messages[channel][i].creator + " cancelled challenge invitation",
+					text: time + this.messages[channel][i].creator + " cancelled challenge invitation",
 					}).appendTo(this.msgWindow);
 				} else if (this.messages[channel][i].type == "gameClosed") {
 					var message = $('<div>', {
-					text: this.messages[channel][i].creator + " closed the game",
+					text: time + this.messages[channel][i].creator + " closed the game",
 					}).appendTo(this.msgWindow);
 				} else if (this.messages[channel][i].type == "challengeAccepted") {
 					var message = $('<div>', {
-					text: this.messages[channel][i].challenger + " accepted your challenge",
+					text: time + this.messages[channel][i].challenger + " accepted your challenge",
 					}).appendTo(this.msgWindow);
 				} else if (this.messages[channel][i].type == "challengeRefused") {
 					var message = $('<div>', {
-					text: this.messages[channel][i].challenger + " refused your challenge",
+					text: time + this.messages[channel][i].challenger + " refused your challenge",
 					}).appendTo(this.msgWindow);
 				}
 			}
