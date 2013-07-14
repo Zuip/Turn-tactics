@@ -16,8 +16,10 @@ function generateRandomString(length) {
 }
 
 // Gets the needed data and handles page request using it
-exports.handlePage = function(req, res, pool, data, callback) {
+// returns the data associated with the page
+exports.handlePage = function(req, res, pool, callback) {
 	var sessionid = req.cookies.session;
+	var data = {};
 	data.username = "";
 	data.login = false;
 	data.status = 0;
@@ -28,7 +30,7 @@ exports.handlePage = function(req, res, pool, data, callback) {
 				console.log("refused");
 				data.status = 1;
 				sendPage(req, res, connection, data, function() {
-					callback();
+					callback(data);
 					return;
 				});
 			} else {
@@ -37,7 +39,7 @@ exports.handlePage = function(req, res, pool, data, callback) {
 		} else {
 			getUsername(connection, sessionid, data, function() {
 				sendPage(req, res, connection, data, function() {
-					callback();
+					callback(data);
 				});
 			});
 			connection.end();

@@ -15,8 +15,6 @@ app.set('view engine', 'ejs')
 app.set('views', __dirname);
 app.use(express.bodyParser());
 app.use(express.cookieParser());
-// app.use(express.session(session 'secret'));
-// app.use(app.route);
 
 // http url path
 var APP_PATH = "";
@@ -37,7 +35,8 @@ chat = require('./modules/chat')(io, pool);
 
 // complete POST actions and
 // modify JSON data to be passed to front-end according to POST data
-app.handlePostQueries = function(req, res, data){
+app.handlePostQueries = function(req, res){
+	var data = {status: 0};
 	if(typeof req.body.register != "undefined") {
 		sessions.handleRegisterPost(req, res, data, pool, function() {
 			app.renderPage(res, "register", data);
@@ -130,33 +129,30 @@ app.serveFiles = function(req, res, directory) {
 // Http
 app.configure(function(){
 	
-	// Data container
-	var data = {status: 0};
-	
 	// Handle post requests
 	app.post(APP_PATH+'/', function(req, res) {
-		app.handlePostQueries(req, res, data);
+		app.handlePostQueries(req, res);
 	});
 	
 	// Handle registering
 	app.post(APP_PATH+'/register', function(req, res) {
-		app.handlePostQueries(req, res, data);
+		app.handlePostQueries(req, res);
 	});
 	
 	// Handle logins
 	app.post(APP_PATH+'/login', function(req, res) {
-		app.handlePostQueries(req, res, data);
+		app.handlePostQueries(req, res);
 	});
 	
 	// Receive ajax post requests
 	app.post(APP_PATH+'/ajax', function(req, res) {
-		app.handlePostQueries(req, res, data);
-		res.send(JSON.stringify(data));
+		//todo
 	});
+	
 	// Respond to ajax queries
 	app.get(APP_PATH+'/ajax/:id', function(req, res){
 		if (req.xhr) { // test if ajax call
-			sessions.handlePage(req, res, pool, data, function() {
+			sessions.handlePage(req, res, pool, function(data) {
 				//last param tells to send ajax data
 				sendPageContent(req, res, data, true);
 			});
@@ -165,15 +161,17 @@ app.configure(function(){
 	
 	// Serve the layout and the page
 	app.get(APP_PATH+'/', function(req, res){
-		app.sendPage(req, res, data);
+		sessions.handlePage(req, res, pool, function(data) {
+			sendPageContent(req, res, data, false);
+		});
 	});
+	
 	app.get(APP_PATH+'/:id', function(req, res, next){
 		/* Do not process user data when getting favicon.ico
 		 * Some browsers try to get favicon.ico even with every ajax request */
 		if (req.params.id != "favicon.ico") {
 			// regular page
-			sessions.handlePage(req, res, pool, data, function() {
-				//last param tells to send ajax data
+			sessions.handlePage(req, res, pool, function(data) {
 				sendPageContent(req, res, data, false);
 			});
 		} else {
