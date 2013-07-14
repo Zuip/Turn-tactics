@@ -40,7 +40,7 @@ chat = {
 			});
 			
 			this.socket.on('error', function() {
-				self.addMessage(self.currentChannel, "", "Login to enter chat", "notice");
+				self.addChatMessage(self.currentChannel, "", "Login to enter chat", "notice");
 				self.updateMessageList(self.currentChannel);
 			});
 		
@@ -54,7 +54,18 @@ chat = {
 		this.socket.on('disconnect', function(){
 			self.socket.disconnect();
 			self.socket.removeAllListeners();
-			self.socket.socket.removeAllListeners();
+			self.challenges = {};
+			self.challenged = {};
+			for (user in self.games) {
+				for (key in self.games[user]) {
+					if (typeof self.games[user][key].window != "undefined") {
+						// delete event listener because the normal functionality can't be used
+						self.games[user][key].window.unbind("dialogclose");
+						self.games[user][key].window.dialog("close");
+					}
+				}
+				delete self.games[user];
+			}
 		});
 		
 		this.socket.on('username', function(username) {
@@ -64,7 +75,7 @@ chat = {
 		this.socket.on('messageDelivered', function(channel, status){
 			self.chatInputText.attr("disabled", false);
 			if (status == true) {
-				self.messages[channel].push({type: "normal", sender: self.username, msg: self.chatInputText.val()});
+				self.addChatMessage(channel, self.username, self.chatInputText.val(), "normal");
 				if (channel == self.currentChannel) {
 					self.updateMessageList(channel);
 				}
@@ -73,108 +84,115 @@ chat = {
 		});
 		
 		this.socket.on('chatMessage', function(channel, userdata, message) {
-			self.addMessage(channel, userdata.username, message, "normal");
+			self.addChatMessage(channel, userdata.username, message, "normal");
 			if (channel == self.currentChannel) {
 				self.updateMessageList(channel);
 			}
 		});
 		
 		this.socket.on('challengeCreated', function(user, key) {
-			if (typeof(self.challenged[user]) == "undefined") {
-				self.challenged[user] = [];
-			}
-			if (typeof(self.games[self.username]) == "undefined") {
-				self.games[self.username] = {};
-			}
-			self.games[self.username][key] = {empty: true, participants: []};
+			self.createEntryIfndef("challenged", user);
+			self.createEntryIfndef("games", self.username);
+			self.games[self.username][key] = {empty: true, participants: [], invited: 1};
 			self.challenged[user][key] = true;
 		}),
 		
 		this.socket.on('newChallenge', function(channel, user, key) {
-			if (typeof self.messages[channel] == "undefined") {
-				self.messages[channel] = new Array();
-			}
-			if (typeof(self.challenges[user]) == "undefined") {
-				self.challenges[user] = [];
-			}
+			self.createEntryIfndef("challenges", user);
 			self.challenges[user][key] = true;
-			self.messages[self.currentChannel].push({type: "challenge", challenger: user, key: key});
-			if (channel == self.currentChannel) {
-				self.updateMessageList(channel);
-			}
+			self.addMessage(self.currentChannel, {type: "challenge", challenger: user, key: key});
+			self.updateMessageList(self.currentChannel);
 		});
 		
 		// Creator of the challenge closed the challenge
 		this.socket.on('challengeClosed', function(user, key) {
-		
 			self.games[user][key].window.dialog("close");
 			delete self.games[user][key];
-			
-			if (typeof self.messages[self.currentChannel] == "undefined") {
-				self.messages[self.currentChannel] = new Array();
-			}
-			self.messages[self.currentChannel].push({type: "gameClosed", creator: user});
+			self.addMessage(self.currentChannel, {type: "gameClosed", creator: user});
 			self.updateMessageList(self.currentChannel);
 		});
 		
 		// confirmation that the challenge was closed successfully
-		this.socket.on('challengeCloseSuccessful', function(key) {
-
-		});
+		this.socket.on('challengeCloseSuccessful', function(key) {});
 		
-		// Game creator: one of the participants cancelled the challenge
-		this.socket.on('challengeCancelled', function(user, key) {
-			// Sent challenges:
-			// if every participant cancels, close the game
-			self.removeParticipant(user, key);
+		// one of the participants cancelled the challenge
+		this.socket.on('challengeCancelled', function(user, key, leaver) {
+		
+			var closed = false;
+			if (user == self.username) {
+				// Sent challenges:
+				// if every participant cancels, close the game
+				self.removeParticipant(self.username, key, leaver);
+				closed = self.checkGameCloseEvent(key);
 
-			// delete challenge record
-			delete self.challenged[user][key];
-			
-			if (typeof self.messages[self.currentChannel] == "undefined") {
-				self.messages[self.currentChannel] = new Array();
+				// delete challenge record
+				if (typeof self.challenged[leaver] != "undefined"
+				&& typeof self.challenged[leaver][key] != "undefined") {
+					delete self.challenged[leaver][key];
+				}
+				self.addMessage(self.currentChannel, {type: "challengeCancelled", participant: leaver});
+			} else {
+				// if the game isn't user's own, it means that one of the other participants left
+				self.removeParticipant(user, key, leaver);
 			}
-			self.messages[self.currentChannel].push({type: "challengeCancelled", participant: user});
+			if (closed == false) {
+				self.updateChallengeWindow(user, key);
+			}
 			self.updateMessageList(self.currentChannel);
 		});
 		
 		// Confirmation that the challenge was cancelled successfully
-		this.socket.on('cancelSuccessful', function(user, key) {
+		this.socket.on('cancelSuccessful', function(user, key) {});
 		
-		});
-		
-		// Game creator cancelled invite for one user
+		// Game creator cancelled invite for current user
 		this.socket.on('invitationCancelled', function(user, key) {
 			// remove challenge
 			delete self.challenges[user][key];
 			// delete game data if the invitation was already accepted
-			if (typeof(self.games[user][key]) != "undefined") {
+			if (typeof(self.games[user]) != "undefined" 
+			&& typeof(self.games[user][key]) != "undefined") {
 				self.games[user][key].window.dialog("close");
 				delete self.games[user][key];
 			}
-			self.messages[self.currentChannel].push({type: "invitationCancelled", creator: user});
+			self.addMessage(self.currentChannel, {type: "invitationCancelled", creator: user});
 			self.updateMessageList(self.currentChannel);
 		});
 		
-		this.socket.on('challengeAccepted', function(user, key) {
-			self.messages[self.currentChannel].push({type: "challengeAccepted", challenger: user});
-			self.updateMessageList(self.currentChannel);
-			// the game is user's own
-			if (self.games[self.username][key].empty == true) {
-				self.createChallengeWindow(self.username, key);
-				self.games[self.username][key].empty = false;
+		// New participant on challenge
+		this.socket.on('challengeAccepted', function(user, key, joiner) {
+			if (self.username == user) {
+				self.addMessage(self.currentChannel, {type: "challengeAccepted", challenger: joiner});
+				self.updateMessageList(self.currentChannel);
+				// create window only if it hasn't been already created
+				if (self.games[self.username][key].empty == true) {
+					self.createChallengeWindow(self.username, key);
+					self.games[self.username][key].empty = false;
+				}
+			} else {
+				//Todo: other kind of message
 			}
-			self.games[self.username][key].participants.push(user);
+			self.games[user][key].participants.push(joiner);
+			self.updateChallengeWindow(user, key);
 		});
 		
+		// Game creator: invited user refused challenge
+		// This doesn't currently close the game if the only invited user refused
 		this.socket.on('challengeRefused', function(user, key) {
 			self.challenged[user][key] = false;
-			self.messages[self.currentChannel].push({type: "challengeRefused", challenger: user});
+			self.games[self.username][key].invited--;
+			self.addMessage(self.currentChannel, {type: "challengeRefused", challenger: user});
 			self.updateMessageList(self.currentChannel);
 		});
 		
-		this.socket.on('chooseChallengeOptions', function(user, key) {
-			self.createChallengeWindow(user, key);
+		// current participant receives data about the challenge
+		this.socket.on('challengeData', function(user, key, data) {
+			if (typeof self.games[user] == "undefined" || typeof self.games[user][key] == "undefined") {
+				self.createChallengeWindow(user, key);
+			}
+			if (typeof data.participants != "undefined") {
+				self.games[user][key].participants = data.participants;
+			}
+			self.updateChallengeWindow(user, key);
 		});
 		
 		this.socket.on('channelJoinSuccessful', function(channel, username) {
@@ -200,7 +218,7 @@ chat = {
 		});
 		
 		this.socket.on('userJoin', function(channel, user){
-			self.addMessage(channel, "", 
+			self.addChatMessage(channel, "", 
 			"User " + user.username + " joined the channel", "notice");
 			self.users[channel][user.username] = user;
 			if (channel == self.currentChannel) {
@@ -209,16 +227,16 @@ chat = {
 			}
 		});
 		this.socket.on('userLeave', function(channel, user){
-			self.addMessage(self.currentChannel, "", 
+			self.addChatMessage(self.currentChannel, "", 
 			"User " + user.username + " left the channel", "notice");
 			if (channel == self.currentChannel) {
 				self.updateMessageList(channel);
+				self.updateUserList(channel);
 			}
 			delete self.users[channel][user.username];
-			self.updateUserList(channel);
 		});
 		this.socket.on('userDisconnect', function(channel, user){
-			self.addMessage(self.currentChannel, "", "User " + user.username + " left the chat",
+			self.addChatMessage(channel, "", "User " + user.username + " left the chat",
 			"notice");
 			if (channel == self.currentChannel) {
 				self.updateMessageList(channel);
@@ -239,6 +257,7 @@ chat = {
 			}
 		});
 		
+		// user receives channel user list after joining
 		this.socket.on('userList', function(channel, userlist) {
 			self.users[channel] = {};
 			self.users[channel] = userlist;
@@ -311,14 +330,22 @@ chat = {
 							} else if (key.substr(0, 6) == "invite") {
 								var gamekey = key.substr(7);
 								self.socket.emit('inviteToExistingChallenge', self.currentChannel, username, gamekey);
-								if (typeof (self.challenged[username]) == "undefined") {
-									self.challenged[username] = {};
-								}
+								self.createEntryIfndef("challenged", username);
 								self.challenged[username][gamekey] = true;
+								self.games[self.username][gamekey].invited++;
 							} else if (key.substr(0, 6) == "cancel") {
 								var gamekey = key.substr(7);
 								self.socket.emit('cancelInvitation', username, gamekey);
-								self.removeParticipant(username, gamekey);
+								if (typeof (self.challenged[username]) != "undefined"
+								&& typeof (self.challenged[username][gamekey]) != "undefined") {
+									delete self.challenged[username][gamekey];
+									self.games[self.username][gamekey].invited--;
+								} else {
+									self.removeParticipant(self.username, gamekey, username);
+								}
+								/* close game if the user was the only invited person
+								 * and nobody had joined the game yet */
+								self.checkGameCloseEvent(gamekey);
 							}
 						},
 						items: {}
@@ -418,10 +445,13 @@ chat = {
 		var challengeWindow = $('<div>', {
 			title: "Game settings"
 		});
-		if (typeof (this.games[user]) == "undefined") {
-			this.games[user] = {};
-		}
-		this.games[user][key] = {window: challengeWindow, cancelled: false, participants: []};
+		
+		var userList = $('<div>', {}).appendTo(challengeWindow);
+		
+		this.createEntryIfndef("games", user);
+		this.games[user][key] = {window: challengeWindow, cancelled: false, participants: [],
+		userList: userList};
+		
 		var self = this;
 		challengeWindow.bind('dialogclose', function(event) {
 			if (typeof(self.challenges[user]) != "undefined" && 
@@ -432,6 +462,7 @@ chat = {
 			if (user != self.username) {
 				if (self.games[user][key].cancelled == false) {
 					self.socket.emit("cancelChallenge", user, key);
+					delete self.games[user][key];
 				}
 			} else {
 				//delete challenge records
@@ -442,19 +473,50 @@ chat = {
 			}
 			delete self.games[user][key];
 		});
+		
 		challengeWindow.dialog();
 	},
 	
-	removeParticipant: function(user, key) {
-		var index = this.games[this.username][key].participants.indexOf(user);
-		this.games[this.username][key].participants.splice(index, 1);
-		if (this.games[this.username][key].participants.length == 0) {
-			this.games[this.username][key].window.dialog("close");
-			delete this.games[this.username][key];
+	// Updates challenge window of certain game
+	updateChallengeWindow: function(user, key) {
+		this.games[user][key].userList.empty();
+		var creator = $('<div>', { html: "Users: <br>"+user }).appendTo(this.games[user][key].userList);
+		for (var i=0; i<this.games[user][key].participants.length; ++i) {
+			var participant = $('<div>', { text: this.games[user][key].participants[i] }).appendTo(this.games[user][key].userList);
 		}
 	},
 	
-	addMessage: function(channel, sender, message, type) {
+	// An user left a game
+	// This keeps context menus and setup window updated
+	removeParticipant: function(user, key, removed) {
+		var index = this.games[user][key].participants.indexOf(removed);
+		this.games[user][key].participants.splice(index, 1);
+	},
+	
+	// Closes game if no participants and invites are left
+	checkGameCloseEvent: function(key) {
+		if (this.games[this.username][key].participants.length == 0) {
+			if (this.games[this.username][key].invited > 0) {
+				return false;
+			}
+			if (typeof this.games[this.username][key].window != "undefined") {
+				this.games[this.username][key].window.dialog("close");
+			}
+			delete this.games[this.username][key];
+			this.socket.emit("closeChallenge", key);
+			return true;
+		}
+		return false;
+	},
+	
+	addMessage: function(channel, data) {
+		if (typeof this.messages[channel] == "undefined") {
+			this.messages[channel] = new Array();
+		}
+		this.messages[channel].push(data);
+	},
+	
+	addChatMessage: function(channel, sender, message, type) {
 		if (typeof this.messages[channel] == "undefined") {
 			this.messages[channel] = new Array();
 		}
@@ -575,6 +637,23 @@ chat = {
 		
 		if (onBottom == true) {
 			this.scrollToBottom(this.msgWindow);
+		}
+	},
+	
+	// helper function to reduce repetition of definition checks
+	createEntryIfndef: function(entrytype, user) {
+		if (entrytype == "challenges") {
+			if (typeof(this.challenges[user]) == "undefined") {
+				this.challenges[user] = [];
+			}
+		} else if (entrytype == "challenged") {
+			if (typeof(this.challenged[user]) == "undefined") {
+				this.challenged[user] = [];
+			}
+		} else if (entrytype == "games") {
+			if (typeof(this.games[user]) == "undefined") {
+				this.games[user] = [];
+			}
 		}
 	}
 	

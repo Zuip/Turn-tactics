@@ -15,15 +15,57 @@ getUserList = function(io, channel) {
 	return userList;
 }
 
-isUserOnChannel = function(io, user, channel) {
-	io.sockets.clients(channel).forEach(function (socket) { 
-		if (socket.id == user.id) {
-			return true;
-		}
-	});
+getGameUserList = function(creator, key) {
+	return users[creator].games[creator][key].participants;
+}
+
+isUserOnChannel = function(socket, channel) {
+	if (typeof socket.channels[channel] != "undefined"
+		&& socket.channels[channel] == true) {
+		return true;
+	}
 	return false;
 }
 
+// Closes games and informs all participants and invited
+closeGame = function(creator, key, confirm) {
+	// Send cancel message to all participants
+	for (user in users[creator].games[creator][key].participants) {
+		users[users[creator].games[creator][key].participants[user]].emit("challengeClosed", creator, key);
+		delete users[users[creator].games[creator][key].participants[user]].games[creator][key];
+	}
+	// Also send cancel message to people who were being invited
+	for (user in users[creator].games[creator][key].invited) {
+		users[users[creator].games[creator][key].invited[user]].emit("invitationCancelled", creator, key);
+		delete users[users[creator].games[creator][key].invited[user]].games[creator][key];
+	}
+	delete users[creator].games[creator][key];
+	if (confirm == true) {
+		users[creator].emit("challengeCloseSuccessful", key);
+	}
+}
+
+// Removes an user from a game that they already joined
+cancelParticipation = function(creator, key, username, confirmation) {
+	// send information to game creator and other participants
+	users[creator].emit("challengeCancelled", creator, key, username);
+	for (user in users[creator].games[creator][key].participants) {
+		if (users[creator].games[creator][key].participants[user] != username) {
+			users[users[creator].games[creator][key].participants[user]].emit("challengeCancelled", creator, key, username);
+		}
+	}
+	// remove the user from participants
+	var index = users[creator].games[creator][key].participants.indexOf(username);
+	users[creator].games[creator][key].participants.splice(index, 1);
+	// delete status for user
+	delete users[username].games[creator][key];
+	// send confirmation to the participant
+	if (confirmation == true) {
+		users[username].emit("cancelSuccessful", creator, key);
+	}
+}
+
+// helper function to check game status for a player
 getGameStatus = function(games, user, key) {
 	if (typeof(games[user]) != "undefined") {
 		if (typeof(games[user][key]) != "undefined") {
@@ -71,16 +113,16 @@ module.exports = function(io, pool) {
 	io.sockets.on('connection', function(socket) {
 		socket.username = socket.handshake.username;
 		socket.games = {};
+		socket.channels = {};
 		users[socket.username] = socket;
 		socket.emit('username', socket.username);
 		
 		socket.on('joinChannel', function(channel) {
-			if (true) { // todo: check if user can join this channel
+			if (channel != "") { // there could be other channels too to check
 				socket.broadcast.to(channel).emit('userJoin', channel, getUser(socket));
 				socket.join(channel);
 				socket.emit('channelJoinSuccessful', channel, socket.username);
 				socket.emit('userList', channel, getUserList(io, channel));
-				socket.channels = {};
 				socket.channels[channel] = true;
 			} else {
 				// Tell user that they can't join on this channel
@@ -88,7 +130,7 @@ module.exports = function(io, pool) {
 			}
 		});
 		socket.on('leaveChannel', function(channel) {
-			if (isUserOnChannel(io, socket, channel)) {
+			if (isUserOnChannel(socket, channel)) {
 				socket.emit('channelLeft', channel);
 				socket.leave(channel);
 				socket.broadcast.to(channel).emit('userLeave', channel, getUser(socket));
@@ -96,7 +138,7 @@ module.exports = function(io, pool) {
 			}
 		});
 		socket.on('sendMessage', function(channel, message) {
-			if (true) { // check if user is on the channel
+			if (isUserOnChannel(socket, channel)) {
 				if (channel == "") {
 					// not allowed
 					socket.emit('messageDelivered', channel, false);
@@ -116,11 +158,13 @@ module.exports = function(io, pool) {
 				if (typeof (socket.games[socket.username]) == "undefined") {
 					socket.games[socket.username] = [];
 				}
-				socket.games[socket.username].push({status: GAME_FIRSTINVITE, participants: []});
+				socket.games[socket.username].push({status: GAME_FIRSTINVITE, invited: [],
+													participants: []});
 				var key = socket.games[socket.username].length - 1;
 				if (typeof (users[invited].games[socket.username]) == "undefined") {
 					users[invited].games[socket.username] = [];
 				}
+				users[socket.username].games[socket.username][key].invited.push(invited);
 				users[invited].games[socket.username][key] = {status: GAME_INVITED};
 				socket.emit('challengeCreated', invited, key);
 				users[invited].emit("newChallenge", channel, socket.username, key);
@@ -133,6 +177,7 @@ module.exports = function(io, pool) {
 				if (typeof(users[user].games[socket.username]) == "undefined") {
 					users[user].games[socket.username] = [];
 				}
+				users[socket.username].games[socket.username][key].invited.push(user);
 				users[user].games[socket.username][key] = {id: key, status: GAME_INVITED};
 				users[user].emit("newChallenge", channel, socket.username, key);
 			}
@@ -143,13 +188,22 @@ module.exports = function(io, pool) {
 			&& getGameStatus(socket.games, creator, key) == GAME_INVITED 
 			&& (getGameStatus(users[creator].games, creator, key) == GAME_FIRSTINVITE 
 				|| getGameStatus(users[creator].games, creator, key) == GAME_INVITING)) {
-				users[creator].emit("challengeAccepted", socket.username, key);
-				socket.emit("chooseChallengeOptions", users[creator].username, key);
+				// Inform creator and all existing participants
+				users[creator].emit("challengeAccepted", creator, key, socket.username);
+				for (user in users[creator].games[creator][key].participants) {
+					users[users[creator].games[creator][key].participants[user]].emit("challengeAccepted", creator, key, socket.username);
+				}
+				// Remove user from invited
+				var index = users[creator].games[creator][key].invited.indexOf(socket.username);
+				users[creator].games[creator][key].invited.splice(index, 1);
 				// Update game information for creator
 				users[creator].games[creator][key].status = GAME_INVITING;
 				users[creator].games[creator][key].participants.push(socket.username);
 				// Update participant status
 				socket.games[creator][key].status = GAME_JOINED;
+				// Send challenge data to user who joined
+				var data = { participants: getGameUserList(creator, key) }
+				socket.emit("challengeData", users[creator].username, key, data);
 			}
 		});
 		socket.on('refuseChallenge', function(creator, key) {
@@ -159,6 +213,11 @@ module.exports = function(io, pool) {
 			&& (getGameStatus(users[creator].games, creator, key) == GAME_FIRSTINVITE 
 				|| getGameStatus(users[creator].games, creator, key) == GAME_INVITING)) {
 				users[creator].emit("challengeRefused", socket.username, key);
+				// remove the user from the invited list
+				var index = users[creator].games[creator][key].invited.indexOf(socket.username);
+				users[creator].games[creator][key].invited.splice(index, 1);
+				// remove status for the user
+				delete users[socket.username].games[creator][key];
 			}
 		});
 		// Game creator cancelled invitation for one user
@@ -168,9 +227,15 @@ module.exports = function(io, pool) {
 				|| getGameStatus(users[invited].games, socket.username, key) == GAME_JOINED)
 			&& (getGameStatus(socket.games, socket.username, key) == GAME_FIRSTINVITE 
 				|| getGameStatus(socket.games, socket.username, key) == GAME_INVITING)) {
-				// remove the user from participants
-				var index = users[socket.username].games[socket.username][key].participants.indexOf(invited);
-				users[socket.username].games[socket.username][key].participants.splice(index, 1);
+				if (getGameStatus(users[invited].games, socket.username, key) == GAME_JOINED) {
+					// remove the user from participants
+					var index = users[socket.username].games[socket.username][key].participants.indexOf(invited);
+					users[socket.username].games[socket.username][key].participants.splice(index, 1);
+				} else if (getGameStatus(users[invited].games, socket.username, key) == GAME_INVITED) {
+					// remove the user from the invited list
+					var index = users[socket.username].games[socket.username][key].invited.indexOf(invited);
+					users[socket.username].games[socket.username][key].invited.splice(index, 1);
+				}
 				// remove the status for invited user
 				delete users[invited].games[socket.username][key];
 				users[invited].emit("invitationCancelled", socket.username, key);
@@ -182,27 +247,41 @@ module.exports = function(io, pool) {
 			if (typeof users[creator] != "undefined" && users[creator].id != socket.id
 			&& getGameStatus(users[creator].games, creator, key) == GAME_INVITING
 			&& getGameStatus(socket.games, creator, key) == GAME_JOINED) {
-				// send information to author
-				users[creator].emit("challengeCancelled", socket.username, key);
-				// remove the user from participants
-				var index = users[creator].games[creator][key].participants.indexOf(socket.username);
-				users[creator].games[creator][key].participants.splice(index, 1);
-				// send confirmation to the participant
-				socket.games[creator].status = GAME_CLOSED;
-				socket.emit("cancelSuccessful", creator, key);
+				cancelParticipation(creator, key, socket.username, true);
 			}
 		});
 		// Game creator closed the game
 		socket.on('closeChallenge', function(key) {
-			// Send cancel message to all participants
-			for (user in socket.games[socket.username][key].participants) {
-				users[socket.games[socket.username][key].participants[user]].emit("challengeClosed", socket.username, key);
+			if (typeof socket.games[socket.username] != "undefined" 
+			&& typeof socket.games[socket.username][key] != "undefined") {
+				closeGame(socket.username, key, true);
 			}
-			delete socket.games[socket.username][key];
-			socket.emit("challengeCloseSuccessful", key);
 		});
 		
 		socket.on('disconnect', function() {
+			// close all created games
+			for (game in socket.games[socket.username]) {
+				closeGame(socket.username, game, false);
+			}
+			delete socket.games[socket.username];
+			// send cancel message to all games joined
+			for (username in socket.games) {
+				if (username != socket.username) {
+					for (key in socket.games[username]) {
+						if (getGameStatus(socket.games, username, key) == GAME_JOINED) {
+							cancelParticipation(username, key, socket.username, true);
+						} else if (getGameStatus(socket.games, username, key) == GAME_INVITED) {
+							// Remove user from invited list
+							var index = users[username].games[username][key].invited.indexOf(socket.username);
+							users[username].games[username][key].invited.splice(index, 1);
+							// Inform the game creator
+							users[username].emit("challengeRefused", socket.username, key);
+						}
+					}
+				}
+			}
+			delete socket.games;
+			// send disconnect message to all channels
 			for (channel in socket.channels) {
 				socket.leave(channel);
 				socket.broadcast.to(channel).emit('userDisconnect', channel, getUser(socket));
