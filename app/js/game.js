@@ -46,19 +46,36 @@ function Pictures() {
 	
 	this.loadPictures = function() {
 	
-		this.pictures[0] = new Picture('sand', 'land', '/images/sand.png');
-		this.pictures[1] = new Picture('grass', 'land', '/images/grass.png');
-		this.pictures[2] = new Picture('water', 'land', '/images/water.png');
-		this.pictures[3] = new Picture('road_straight', 'object', '/images/road_straight.png');
-		this.pictures[4] = new Picture('road_intersection1', 'object', '/images/road_intersection1.png');
-		this.pictures[5] = new Picture('road_intersection2', 'object', '/images/road_intersection2.png');
-		this.pictures[6] = new Picture('road_curve', 'object', '/images/road_curve.png');
-		this.pictures[7] = new Picture('road_end', 'object', '/images/road_end.png');
-		this.pictures[8] = new Picture('building1', 'object', '/images/building1.gif');
-		this.pictures[9] = new Picture('building2', 'object', '/images/building2.png');
-		this.pictures[10] = new Picture('tree1', 'object', '/images/tree1.png');
-		this.pictures[11] = new Picture('mountain', 'object', '/images/mountain.png');
-		this.pictures[12] = new Picture('selector', 'object', '/images/selector.png');
+		this.pictures[0] = new Picture('sand1', 'land', '/images/sand1.png');
+		this.pictures[1] = new Picture('sand2', 'land', '/images/sand2.png');
+		this.pictures[2] = new Picture('grass1', 'land', '/images/grass1.png');
+		this.pictures[3] = new Picture('grass2', 'land', '/images/grass2.png');
+		this.pictures[4] = new Picture('grass3', 'land', '/images/grass3.png');
+		this.pictures[5] = new Picture('grass4', 'land', '/images/grass4.png');
+		this.pictures[6] = new Picture('grass5', 'land', '/images/grass5.png');
+		this.pictures[7] = new Picture('water', 'water', '/images/water.png');
+		this.pictures[8] = new Picture('road_straight', 'object', '/images/road_straight.png');
+		this.pictures[9] = new Picture('road_intersection1', 'object', '/images/road_intersection1.png');
+		this.pictures[10] = new Picture('road_intersection2', 'object', '/images/road_intersection2.png');
+		this.pictures[11] = new Picture('road_curve', 'object', '/images/road_curve.png');
+		this.pictures[12] = new Picture('road_end', 'object', '/images/road_end.png');
+		this.pictures[13] = new Picture('building1', 'object', '/images/building1.gif');
+		this.pictures[14] = new Picture('building2', 'object', '/images/building2.png');
+		this.pictures[15] = new Picture('tree1', 'object', '/images/tree1.png');
+		this.pictures[16] = new Picture('tree2', 'object', '/images/tree2.png');
+		this.pictures[17] = new Picture('tree3', 'object', '/images/tree3.png');
+		this.pictures[18] = new Picture('tree4', 'object', '/images/tree4.png');
+		this.pictures[19] = new Picture('tree5', 'object', '/images/tree5.png');
+		this.pictures[20] = new Picture('tree6', 'object', '/images/tree6.png');
+		this.pictures[21] = new Picture('mountain1', 'object', '/images/mountain1.png');
+		this.pictures[22] = new Picture('mountain2', 'object', '/images/mountain2.png');
+		this.pictures[23] = new Picture('mountain3', 'object', '/images/mountain3.png');
+		this.pictures[24] = new Picture('mountain4', 'object', '/images/mountain4.png');
+		this.pictures[25] = new Picture('cliff1', 'object', '/images/cliff1.png');
+		this.pictures[26] = new Picture('cliff2', 'object', '/images/cliff2.png');
+		this.pictures[27] = new Picture('cactus1', 'object', '/images/cactus1.png');
+		this.pictures[28] = new Picture('cactus2', 'object', '/images/cactus2.png');
+		this.pictures[29] = new Picture('selector', 'object', '/images/selector.png');
 		
 		for(var i = 0; i < this.pictures.length; ++i) {
 			this.pictures[i].init();
@@ -157,7 +174,6 @@ function Node(land, object) {
 	this.tile = new Tile(land, object);
 	
 	this.draw = function(coordX, coordY) {
-		console.log(coordX + " " + coordY);
 		this.tile.draw(coordX, coordY);
 	}
 }
@@ -203,12 +219,13 @@ function Map() {
 	}
 	
 	this.addElement = function(mouseX, mouseY, element) {
-		nodeX = ( mouseX + this.locationX - ( mouseX + this.locationX ) % 50 ) / 50;
-		nodeY = ( mouseY + this.locationY - ( mouseY + this.locationY ) % 50 ) / 50;
+		nodeX = ( mouseX - this.locationX - ( mouseX - this.locationX ) % 50 ) / 50;
+		nodeY = ( mouseY - this.locationY - ( mouseY - this.locationY ) % 50 ) / 50;
 		
 		if(nodeX < this.sizeX && nodeY < this.sizeY) {
 			elementData = game.pictures.returnData(element);
-			if(elementData.type == 'land') {
+
+			if(elementData.type == 'land' || elementData.type == 'water') {
 				this.nodes[nodeX][nodeY].tile.land = element;
 			}
 			
@@ -236,7 +253,7 @@ function Map() {
 			this.nodes[i] = new Array();
 			
 			for(var j = 0; j < this.sizeY; ++j) {
-				this.nodes[i][j] = new Node("sand", "");
+				this.nodes[i][j] = new Node("sand1", "");
 			}
 		}
 	}
@@ -266,7 +283,8 @@ function Editor() {
 	this.lowerMinus = 15;
 	
 	// Editor settings
-	this.objects = new Array('sand', 'grass', 'water', 'road_straight', 'building1', 'building2', 'tree1', 'mountain');
+	this.objects = new Array('sand1', 'sand2', 'grass1', 'water', 'road_straight', 'building1', 'building2', 'mountain1', 'mountain2', 'mountain3', 'mountain4',
+								'tree1', 'tree2', 'tree3', 'tree4', 'tree5', 'tree6', 'cliff1', 'cliff2', 'cactus1', 'cactus2');
 	this.page = 0;
 	this.disBetweenPics = 10;
 	this.editorX = c.width - this.width + 15;
@@ -342,7 +360,7 @@ function Editor() {
 				this.amountOfObjects = 9;
 			}
 			for(var i = this.page * 9; i < this.page * 9 + this.amountOfObjects; ++i) {
-				if(i < this.amountOfObjects) {
+				if(i < i * this.page + this.amountOfObjects) {
 					var locX = this.editorX + i % 3 * (game.map.tileSize + this.disBetweenPics);
 					var locY = this.editorY + ( (i - i % 3) / 3 ) % 3 * (game.map.tileSize + this.disBetweenPics);
 					ctx.drawImage(game.pictures.returnPicture(this.objects[i]), locX, locY);
@@ -350,13 +368,50 @@ function Editor() {
 				}
 			}
 			
-			// Buttons in editor
+			// BUTTONS IN EDITOR
 			ctx.strokeStyle = "#000000";
 			ctx.font = "15pt Calibri";
+			
+			// Browse left button
 			ctx.strokeRect(this.editorX, this.editorY + 180, 80, 25);
+			if(this.page - 1 >= 0) {
+				ctx.fillStyle = '#00CC66';
+			} else {
+				ctx.fillStyle = '#666666';
+			}
+			ctx.beginPath();
+			ctx.moveTo(this.editorX + 50, this.editorY + 180 + 5);
+			ctx.lineTo(this.editorX + 50, this.editorY + 180 + 20);
+			ctx.lineTo(this.editorX + 30, this.editorY + 180 + 13);
+			ctx.lineTo(this.editorX + 50, this.editorY + 180 + 5);
+			ctx.fill();
+			ctx.stroke();
+			ctx.closePath();
+			
+			// Browse right button
 			ctx.strokeRect(c.width - 95, this.editorY + 180, 80, 25);
+			if((this.page + 1) * 9 < this.objects.length) {
+				ctx.fillStyle = '#00CC66';
+			} else {
+				ctx.fillStyle = '#666666';
+			}
+			ctx.beginPath();
+			ctx.moveTo(c.width - 95 + 30, this.editorY + 180 + 5);
+			ctx.lineTo(c.width - 95 + 30, this.editorY + 180 + 20);
+			ctx.lineTo(c.width - 95 + 50, this.editorY + 180 + 13);
+			ctx.lineTo(c.width - 95 + 30, this.editorY + 180 + 5);
+			ctx.fill();
+			ctx.stroke();
+			ctx.closePath();
+			
+			// Selector button
+			ctx.fillStyle = "#000000";
 			ctx.strokeRect(this.editorX, this.editorY + 215, 170, 25);
 			ctx.fillText( 'Selector', this.editorX + 50, this.editorY + 235 );
+			
+			// Deletor button
+			ctx.strokeRect(this.editorX, this.editorY + 250, 170, 25);
+			ctx.fillText( 'Deletor', this.editorX + 53, this.editorY + 270 );
 		}
 	}
 }
@@ -573,7 +628,7 @@ function mapSizeButtonEvents() {
 // Chooses the object that will be added to map
 function chooseEditorElement() {
 	for(var i = game.editor.page * 9; i < game.editor.page * 9 + game.editor.amountOfObjects; ++i) {
-		if(i < game.editor.amountOfObjects) {
+		if(i < game.editor.page * 9 + game.editor.amountOfObjects) {
 			var locX = game.editor.editorX + i % 3 * (game.map.tileSize + game.editor.disBetweenPics);
 			var locY = game.editor.editorY + ( (i - i % 3) / 3 ) % 3 * (game.map.tileSize + game.editor.disBetweenPics);
 			
@@ -591,6 +646,22 @@ function chooseEditorElement() {
 	if(game.mouse.coordX > game.editor.editorX && game.mouse.coordX < game.editor.editorX + 170
 						&& game.mouse.coordY > game.editor.editorY + 215 && game.mouse.coordY < game.editor.editorY + 240) {
 		game.selector = "selector";			
+	}
+	
+	// Change element pages
+	// Browse right button
+	if(game.mouse.coordX > c.width - 95 && game.mouse.coordX < c.width - 15 
+						&& game.mouse.coordY > game.editor.editorY + 180 && game.mouse.coordY < game.editor.editorY + 205) {
+		if((game.editor.page + 1) * 9 < game.editor.objects.length) {
+			game.editor.page += 1;
+		}
+	}
+	// Browse left button
+	if(game.mouse.coordX > game.editor.editorX && game.mouse.coordX < game.editor.editorX + 80 
+						&& game.mouse.coordY > game.editor.editorY + 180 && game.mouse.coordY < game.editor.editorY + 205) {
+		if(game.editor.page - 1 >= 0) {
+			game.editor.page -= 1;
+		}
 	}
 }
 
