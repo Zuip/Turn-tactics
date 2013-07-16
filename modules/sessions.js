@@ -80,10 +80,16 @@ function checkPassword(req, res, data, connection, callback) {
 exports.handleLoginPost = function(req, res, data, pool, callback) {
 
 	pool.getConnection(function(err, connection) {
-		if (err) throw err;
-		checkPassword(req, res, data, connection, function() {
+		if (err && err.code == 'ECONNREFUSED') {
+			data.logSuc = 0;
 			callback();
-		});
+		} else if (err) {
+			throw err;
+		} else {
+			checkPassword(req, res, data, connection, function() {
+				callback();
+			});
+		}
 		connection.end();
 	});
 }
@@ -94,15 +100,21 @@ function addUser(req, res, data, connection, hash, callback) {
 	var query = connection.query('INSERT INTO users (user, password, ip, sessionid) VALUES (?, \'' + hash + '\', ?, ?)',
 		[req.body.uname, req.connection.remoteAddress, sessionid],
 		function(err, rows, fields) { 
-			if (err) throw err;
-			// Add session cookies
-			res.cookie('session', sessionid, { maxAge: autoLogOffTime, httpOnly: false});
-			
-			// Adding the user succeeded
-			data.regSuc = 1;
-			data.login = true;
-			data.username = req.body.uname;
-			callback();
+			if (err && err.code == 'ECONNREFUSED') {
+				data.regSuc = 0;
+				callback();
+			} else if (err) {
+				throw err;
+			} else {
+				// Add session cookies
+				res.cookie('session', sessionid, { maxAge: autoLogOffTime, httpOnly: false});
+				
+				// Adding the user succeeded
+				data.regSuc = 1;
+				data.login = true;
+				data.username = req.body.uname;
+				callback();
+			}
 		});
 }
 
