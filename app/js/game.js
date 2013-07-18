@@ -75,7 +75,8 @@ function Pictures() {
 		this.pictures[26] = new Picture('cliff2', 'object', '/images/cliff2.png');
 		this.pictures[27] = new Picture('cactus1', 'object', '/images/cactus1.png');
 		this.pictures[28] = new Picture('cactus2', 'object', '/images/cactus2.png');
-		this.pictures[29] = new Picture('selector', 'object', '/images/selector.png');
+		this.pictures[29] = new Picture('selector', 'cursor', '/images/selector.png');
+		this.pictures[30] = new Picture('deletor', 'cursor', '/images/cross.png');
 		
 		for(var i = 0; i < this.pictures.length; ++i) {
 			this.pictures[i].init();
@@ -225,12 +226,32 @@ function Map() {
 		if(nodeX < this.sizeX && nodeY < this.sizeY) {
 			elementData = game.pictures.returnData(element);
 
+			// Add land
 			if(elementData.type == 'land' || elementData.type == 'water') {
-				this.nodes[nodeX][nodeY].tile.land = element;
+				if(elementData.name == 'grass1') {
+					var randomValue = Math.floor((Math.random() * 10) + 1);
+					
+					// Make more grass1 and grass2 than others
+					if(randomValue > 5 && randomValue < 8) {
+						randomValue = 1;
+					} else if(randomValue >= 8) {
+						randomValue = 2;
+					}
+					
+					this.nodes[nodeX][nodeY].tile.land = 'grass' + randomValue;
+				} else {
+					this.nodes[nodeX][nodeY].tile.land = element;
+				}
 			}
 			
+			// Add object
 			else if(elementData.type == 'object') {
 				this.nodes[nodeX][nodeY].tile.object = element;
+			}
+			
+			// Delete object if using deletor
+			else if(elementData.name == 'deletor') {
+				this.nodes[nodeX][nodeY].tile.object = "";
 			}
 		}
 	}
@@ -470,7 +491,20 @@ function Game() {
 		if(!this.mouse.out && !(game.mod == 'editor' && this.mouse.coordX > c.width - this.editor.width - 1)) {
 			var selectorX = this.mouse.coordX - (this.mouse.coordX - this.map.locationX) % 50;
 			var selectorY = this.mouse.coordY - (this.mouse.coordY - this.map.locationY) % 50;
+			
 			ctx.drawImage(this.pictures.returnPicture(this.selector), selectorX, selectorY);
+			
+			// If using editor mode and player have chosen land or water,
+			// draw node's objects on top of cursor if needed. This prevents
+			// hiding of the object when moving land over object.
+			if(this.mod == "editor" && (this.pictures.returnData(this.selector).type == "land" || this.pictures.returnData(this.selector).type == "water")) {
+				var nodeX = ( this.mouse.coordX - this.map.locationX - ( this.mouse.coordX - this.map.locationX ) % 50 ) / 50;
+				var nodeY = ( this.mouse.coordY - this.map.locationY - ( this.mouse.coordY - this.map.locationY ) % 50 ) / 50;
+				
+				if(this.map.sizeX > nodeX && this.map.sizeY > nodeY && this.map.nodes[nodeX][nodeY].tile.object != "") {
+					ctx.drawImage(this.pictures.returnPicture(this.map.nodes[nodeX][nodeY].tile.object), selectorX, selectorY);
+				}
+			}
 		}
 		
 		if(game.mod == 'editor') {
@@ -646,6 +680,12 @@ function chooseEditorElement() {
 	if(game.mouse.coordX > game.editor.editorX && game.mouse.coordX < game.editor.editorX + 170
 						&& game.mouse.coordY > game.editor.editorY + 215 && game.mouse.coordY < game.editor.editorY + 240) {
 		game.selector = "selector";			
+	}
+	
+	// Select deletor
+	if(game.mouse.coordX > game.editor.editorX && game.mouse.coordX < game.editor.editorX + 170
+						&& game.mouse.coordY > game.editor.editorY + 250 && game.mouse.coordY < game.editor.editorY + 275) {
+		game.selector = "deletor";
 	}
 	
 	// Change element pages
