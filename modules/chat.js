@@ -1,6 +1,17 @@
 var users = {};
 var cookie = require('cookie');
 
+// Private channel prefix
+var PRIVATE_CHANNEL = true;
+var PRIVATE_CHANNEL_SEPARATOR = "!";
+
+// Game statuses
+var GAME_CLOSED = 0;
+var GAME_FIRSTINVITE = 1;
+var GAME_INVITING = 2;
+var GAME_INVITED = 3;
+var GAME_JOINED = 4;
+
 getUser = function(socket) {
 	var data = {username: socket.username};
 	return data;
@@ -8,7 +19,7 @@ getUser = function(socket) {
 
 getUserList = function(io, channel) {
 	var userList = {};
-	io.sockets.clients(channel).forEach(function (socket) {
+	io.clients(channel).forEach(function (socket) {
 		var user = getUser(socket);
 		userList[user.username] = user;
 	});
@@ -25,6 +36,11 @@ isUserOnChannel = function(socket, channel) {
 		return true;
 	}
 	return false;
+}
+
+// Creates unique name for game room to avoid name collisions
+getGameRoomName = function(creator, key) {
+	return PRIVATE_CHANNEL_SEPARATOR + creator + PRIVATE_CHANNEL_SEPARATOR + key;
 }
 
 // Closes games and informs all participants and invited
@@ -75,14 +91,9 @@ getGameStatus = function(games, user, key) {
 	return 0;
 }
 
-// Game statuses
-var GAME_CLOSED = 0;
-var GAME_FIRSTINVITE = 1;
-var GAME_INVITING = 2;
-var GAME_INVITED = 3;
-var GAME_JOINED = 4;
-
 module.exports = function(io, pool) {
+
+	var chat = io.of('/chat');
 
 	io.set('authorization', function (handshakeData, accept) {
 	
@@ -110,7 +121,7 @@ module.exports = function(io, pool) {
 		}
 	});
 
-	io.sockets.on('connection', function(socket) {
+	chat.on('connection', function(socket) {
 		socket.username = socket.handshake.username;
 		socket.games = {};
 		socket.channels = {};
@@ -118,17 +129,19 @@ module.exports = function(io, pool) {
 		socket.emit('username', socket.username);
 		
 		socket.on('joinChannel', function(channel) {
-			if (channel != "") { // there could be other channels too to check
+			if (channel != "" && channel.substr(0, 1) != PRIVATE_CHANNEL_SEPARATOR
+			&& !isUserOnChannel(socket, channel)) { // there could be other channels too to check
 				socket.broadcast.to(channel).emit('userJoin', channel, getUser(socket));
 				socket.join(channel);
-				socket.emit('channelJoinSuccessful', channel, socket.username);
-				socket.emit('userList', channel, getUserList(io, channel));
+				socket.emit('channelJoinSuccessful', channel);
+				socket.emit('userList', channel, getUserList(chat, channel));
 				socket.channels[channel] = true;
 			} else {
 				// Tell user that they can't join on this channel
 				socket.emit('cannotJoinChannel', channel);
 			}
 		});
+		
 		socket.on('leaveChannel', function(channel) {
 			if (isUserOnChannel(socket, channel)) {
 				socket.emit('channelLeft', channel);
@@ -137,8 +150,10 @@ module.exports = function(io, pool) {
 				socket.channels[channel] = false;
 			}
 		});
+		
 		socket.on('sendMessage', function(channel, message) {
-			if (isUserOnChannel(socket, channel)) {
+			var hasPrivateChannelPrefix = (channel.substr(0, 1) == PRIVATE_CHANNEL_SEPARATOR);
+			if (!hasPrivateChannelPrefix && isUserOnChannel(socket, channel)) {
 				if (channel == "") {
 					// not allowed
 					socket.emit('messageDelivered', channel, false);
@@ -148,9 +163,18 @@ module.exports = function(io, pool) {
 				}
 			} else {
 				// not on channel
-				socket.emit('notOnChannel', { channel: channel });
+				socket.emit('notOnChannel', channel);
 			}
 		});
+		
+		socket.on('gameMessage', function(creator, key, message) {
+			var channel = getGameRoomName(creator, key);
+			if (isUserOnChannel(socket, channel)) {
+				socket.emit('gameMessageDelivered', creator, key);
+				socket.broadcast.to(channel).emit('gameMessage', creator, key, getUser(socket), message);
+			}
+		});
+		
 		socket.on('createChallenge', function(channel, invited) {
 			//Todo: check that the user is actually on the channel the challenge was sent from
 			// also check if the challenge has already been sent
@@ -167,6 +191,9 @@ module.exports = function(io, pool) {
 				users[socket.username].games[socket.username][key].invited.push(invited);
 				users[invited].games[socket.username][key] = {status: GAME_INVITED};
 				socket.emit('challengeCreated', invited, key);
+				var gameChannel = getGameRoomName(socket.username, key);
+				socket.join(gameChannel);
+				socket.channels[gameChannel] = true;
 				users[invited].emit("newChallenge", channel, socket.username, key);
 			}
 		});
@@ -201,6 +228,9 @@ module.exports = function(io, pool) {
 				users[creator].games[creator][key].participants.push(socket.username);
 				// Update participant status
 				socket.games[creator][key].status = GAME_JOINED;
+				// Join game's chatroom
+				socket.join(getGameRoomName(creator, key));
+				socket.channels[getGameRoomName(creator, key)] = true;
 				// Send challenge data to user who joined
 				var data = { participants: getGameUserList(creator, key) }
 				socket.emit("challengeData", users[creator].username, key, data);
@@ -231,6 +261,9 @@ module.exports = function(io, pool) {
 					// remove the user from participants
 					var index = users[socket.username].games[socket.username][key].participants.indexOf(invited);
 					users[socket.username].games[socket.username][key].participants.splice(index, 1);
+					// leave game chatroom
+					users[socket.username].leave(getGameRoomName(socket.username, key));
+					users[socket.username].channels[getGameRoomName(socket.username, key)] = false;
 				} else if (getGameStatus(users[invited].games, socket.username, key) == GAME_INVITED) {
 					// remove the user from the invited list
 					var index = users[socket.username].games[socket.username][key].invited.indexOf(invited);
@@ -248,6 +281,8 @@ module.exports = function(io, pool) {
 			&& getGameStatus(users[creator].games, creator, key) == GAME_INVITING
 			&& getGameStatus(socket.games, creator, key) == GAME_JOINED) {
 				cancelParticipation(creator, key, socket.username, true);
+				users[socket.username].leave(getGameRoomName(creator, key));
+				users[socket.username].channels[getGameRoomName(creator, key)] = false;
 			}
 		});
 		// Game creator closed the game
