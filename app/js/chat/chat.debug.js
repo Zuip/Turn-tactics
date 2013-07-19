@@ -85,7 +85,14 @@ Chat = function() {
 		});
 		
 		this.Tabs.updateTabs();
-		this.Tabs.changeToCurrentTab();
+		if (this.Tabs.currentTab != null && this.Tabs.currentTab.type == this.Tabs.TAB_CHANNEL) {
+			this.Tabs.changeToChannelTab(this.Tabs.currentTab.channel, true);
+		} else if (this.Tabs.currentTab != null && this.Tabs.currentTab.type == this.Tabs.TAB_GAME) {
+			this.Tabs.changeToGameTab(this.Tabs.currentTab.creator, this.Tabs.currentTab.key);
+		} else if (this.currentTab == null) {
+			this.Tabs.updateUserList("");
+			this.Tabs.updateMessageList("");
+		}
 	};
 	
 	this.joinChannel = function(channel) {
@@ -322,6 +329,8 @@ Chat.Events = function(chat) {
 				chat.Tabs.updateCurrentTab();
 			});
 		
+		} else {
+			chat.Tabs.updateTabs();
 		}
 	};
 	
@@ -467,7 +476,7 @@ Chat.Events = function(chat) {
 				chat.Games.removeParticipant(user, key, leaver);
 			}
 			if (chat.GAMETABS == false && closed == false) {
-				chat.Games.updateChallengeWindow(user, key);
+				chat.Tabs.updateChallengeWindow(user, key);
 			}
 			chat.Tabs.updateCurrentTab();
 		});
@@ -484,7 +493,7 @@ Chat.Events = function(chat) {
 				chat.Games.getGame(user, key).window.dialog("close");
 				chat.Games.deleteGame(user, key);
 			}
-			chat.Messages.addMessage({type: "current"}, {type: "invitationCancelled", creator: user});
+			chat.Tabs.addMessage({type: "current"}, {type: "invitationCancelled", creator: user});
 			chat.Tabs.updateCurrentTab();
 		});
 		
@@ -972,7 +981,9 @@ Chat.Tabs = function(chat) {
 			this.removeTabHighlight();
 			this.updateMessageList(channel);
 			this.updateUserList(channel);
+			console.log("JOO: "+$("#chat-"+channel).length);
 			$("#chat-"+channel).addClass("chatTabSelected");
+			console.log("LISATTY?: "+$("#chat-"+channel).attr('class'));
 			this.currentTab.type = this.TAB_CHANNEL;
 			this.currentTab.channel = channel;
 		}
@@ -989,6 +1000,7 @@ Chat.Tabs = function(chat) {
 	};
 	
 	this.removeTabHighlight = function() {
+	console.log("POISTO");
 		if (this.currentTab != null) {
 			if (this.currentTab.type == this.TAB_CHANNEL) {
 				$("#chat-"+this.currentTab.channel).removeClass("chatTabSelected");
@@ -1000,6 +1012,7 @@ Chat.Tabs = function(chat) {
 	
 	this.updateTabs = function() {
 		this.tabs.empty();
+		//$('#tabs').empty();
 		for (var i=0; i<this.tabList.length; i++) {
 			if (this.tabList[i].type == this.TAB_CHANNEL) {
 				this.createChannelTab(this.tabList[i].channel, true);
@@ -1008,17 +1021,6 @@ Chat.Tabs = function(chat) {
 			}
 		}
 	};
-	
-	this.changeToCurrentTab = function() {
-		if (this.currentTab != null && this.currentTab.type == this.TAB_CHANNEL) {
-			this.changeToChannelTab(this.currentTab.channel, true);
-		} else if (this.currentTab != null && this.currentTab.type == this.TAB_GAME) {
-			this.changeToGameTab(this.currentTab.creator, this.currentTab.key);
-		} else if (this.currentTab == null) {
-			this.updateUserList("");
-			this.updateMessageList("");
-		}
-	}
 	
 	this.updateCurrentTab = function() {
 		if (this.currentTab.type == this.TAB_CHANNEL) {

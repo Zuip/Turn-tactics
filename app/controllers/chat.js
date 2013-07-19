@@ -1,5 +1,6 @@
 var pages = pages || {};
 pages["chat"] = pages["chat"] || {};
 pages["chat"].init = function() {
-	chat.init();
+	window.chatInstance = window.chatInstance || new Chat();
+	window.chatInstance.init();
 }
