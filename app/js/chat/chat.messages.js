@@ -8,6 +8,9 @@ Chat.Messages = function(chat) {
 	this.messages = [];
 	this.messages[""] = new Array();
 
+	// Number of chat messages stored at one time
+	this.BUFFER_SIZE = 10;
+
 	this.messagesExist = function(channel) {
 		return typeof this.messages[channel] != "undefined";
 	};
@@ -23,13 +26,18 @@ Chat.Messages = function(chat) {
 		if (target.type == "current") {
 			if (chat.Tabs.currentTab.type == chat.Tabs.TAB_CHANNEL) {
 				this.messages[chat.Tabs.currentTab.channel].push(data);
+				this.limitArray(this.messages[chat.Tabs.currentTab.channel], this.BUFFER_SIZE);
 			} else if (chat.Tabs.currentTab.type == chat.Tabs.TAB_GAME) {
-				chat.Games.getGame(chat.Tabs.currentTab.creator, Chat.Tabs.currentTab.key).chatMessages.push(data);
+				var game = chat.Games.getGame(chat.Tabs.currentTab.creator, Chat.Tabs.currentTab.key);
+				game.chatMessages.push(data);
+				this.limitArray(game.chatMessages, this.BUFFER_SIZE);
 			} else {
 				this.messages[""].push(data);
+				this.limitArray(this.messages[""], this.BUFFER_SIZE);
 			}
 		} else if (target.type == "channel") {
 			this.messages[target.channel].push(data);
+			this.limitArray(this.messages[target.channel], this.BUFFER_SIZE);
 		}
 	};
 	
@@ -38,6 +46,13 @@ Chat.Messages = function(chat) {
 			this.messages[channel] = new Array();
 		}
 		this.messages[channel].push({time: new Date(), sender: sender, msg: message, type: type});
+		this.limitArray(this.messages[channel], this.BUFFER_SIZE);
+	};
+	
+	this.limitArray = function(array, size) {
+		if (array.length > size) {
+			array.splice(0, array.length - size);
+		}
 	};
 	
 	this.sendMessage = function(element) {

@@ -80,7 +80,9 @@ Chat.Events = function(chat) {
 			source.attr("disabled", false);
 			var data = {time: new Date(), sender: {username: chat.username, userlevel: chat.userlevel}, 
 			msg: source.val(), type: "normal"};
-			chat.Games.getGame(creator, key).chatMessages.push(data);
+			var game = chat.Games.getGame(creator, key);
+			game.chatMessages.push(data);
+			chat.Messages.limitArray(game.chatMessages, chat.Messages.BUFFER_SIZE);
 			source.val("");
 			
 			if (chat.GAMETABS == false) {
@@ -98,7 +100,9 @@ Chat.Events = function(chat) {
 		
 		chat.socket.on('gameMessage', function(creator, key, userdata, message) {
 			if (chat.Games.isGameDefined(creator, key)) {
-				chat.Games.getGame(creator, key).chatMessages.push({time: new Date(), sender: userdata, msg: message, type: "normal"});
+				var game = chat.Games.getGame(creator, key);
+				game.chatMessages.push({time: new Date(), sender: userdata, msg: message, type: "normal"});
+				chat.Messages.limitArray(game.chatMessages, chat.Messages.BUFFER_SIZE);
 				
 				if (chat.GAMETABS == false) {
 					chat.Tabs.updateGameMessageList(chat.Games.getGame(creator, key).chatDiv, creator, key);
