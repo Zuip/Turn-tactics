@@ -10,4 +10,5 @@ USED TECHNOLOGIES:
 - AJAX
 - HTML5
 
-In DATABASE project there is TABLE users with fields user (varchar(15)), password (binary(40)), ip (varchar(40)), last_used (timestamp, on update CURRENT_TIMESTAMP), sessionid (varchar(25))
+MySQL database schema is available in file *database.sql*.
+Database configurations are defined in *server.js*.
