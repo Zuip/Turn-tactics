@@ -190,7 +190,7 @@ Chat.Games = function(chat) {
 	// An user left a game
 	// This keeps context menus and setup window updated
 	this.removeParticipant = function(user, key, removed) {
-		delete this.games[user][key].participants[removedremoved];
+		delete this.games[user][key].participants[removed];
 	};
 	
 	// Closes game if no participants and invites are left

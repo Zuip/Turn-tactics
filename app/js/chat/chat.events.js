@@ -202,6 +202,14 @@ Chat.Events = function(chat) {
 		// Confirmation that the challenge was cancelled successfully
 		chat.socket.on('cancelSuccessful', function(user, key) {});
 		
+		chat.socket.on('inviteStatus', function(invited, key, status) {
+			if (status == true) {
+				chat.Games.createEntryIfndef("challenged", invited);
+				chat.Games.setChallengedByMe(invited, key, true);
+				chat.Games.addGameInvited(chat.username, key, invited);
+			}
+		});
+		
 		// Game creator cancelled invite for current user
 		chat.socket.on('invitationCancelled', function(user, key) {
 			// remove challenge

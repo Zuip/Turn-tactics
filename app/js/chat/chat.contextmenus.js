@@ -70,9 +70,6 @@ Chat.ContextMenus = function(chat) {
 		} else if (key.substr(0, 6) == "invite") {
 			var gamekey = key.substr(7);
 			chat.socket.emit('inviteToExistingChallenge', chat.Tabs.currentTab.channel, username, gamekey);
-			chat.Games.createEntryIfndef("challenged", username);
-			chat.Games.setChallengedByMe(username, gamekey, true);
-			chat.Games.addGameInvited(chat.username, gamekey, username);
 		} else if (key.substr(0, 6) == "cancel") {
 			var gamekey = key.substr(7);
 			chat.socket.emit('cancelInvitation', username, gamekey);

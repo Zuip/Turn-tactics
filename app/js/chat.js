@@ -234,9 +234,6 @@ Chat.ContextMenus = function(chat) {
 		} else if (key.substr(0, 6) == "invite") {
 			var gamekey = key.substr(7);
 			chat.socket.emit('inviteToExistingChallenge', chat.Tabs.currentTab.channel, username, gamekey);
-			chat.Games.createEntryIfndef("challenged", username);
-			chat.Games.setChallengedByMe(username, gamekey, true);
-			chat.Games.addGameInvited(chat.username, gamekey, username);
 		} else if (key.substr(0, 6) == "cancel") {
 			var gamekey = key.substr(7);
 			chat.socket.emit('cancelInvitation', username, gamekey);
@@ -498,6 +495,14 @@ Chat.Events = function(chat) {
 		
 		// Confirmation that the challenge was cancelled successfully
 		chat.socket.on('cancelSuccessful', function(user, key) {});
+		
+		chat.socket.on('inviteStatus', function(invited, key, status) {
+			if (status == true) {
+				chat.Games.createEntryIfndef("challenged", invited);
+				chat.Games.setChallengedByMe(invited, key, true);
+				chat.Games.addGameInvited(chat.username, key, invited);
+			}
+		});
 		
 		// Game creator cancelled invite for current user
 		chat.socket.on('invitationCancelled', function(user, key) {
@@ -823,7 +828,7 @@ Chat.Games = function(chat) {
 	// An user left a game
 	// This keeps context menus and setup window updated
 	this.removeParticipant = function(user, key, removed) {
-		delete this.games[user][key].participants[removedremoved];
+		delete this.games[user][key].participants[removed];
 	};
 	
 	// Closes game if no participants and invites are left

@@ -35,8 +35,8 @@ exports.getChallengeData = function(users, creator, key) {
 exports.doesParticipantExist = function(users, creator, key, username, callback) {
 	// if the user is in chat, db connection isn't needed
 	var isValid = (users[username].games[creator] != "undefined") 
-				&& (users[creator].id != socket.id);
-	var status = getGameStatus(users[creator].games, creator, key)
+				&& (creator != username);
+	var status = getGameStatus(users[username].games, creator, key);
 	callback(isValid, status);
 }
 
@@ -75,7 +75,7 @@ exports.createChallenge = function(users, socket, invited, key, channel) {
 	users[invited].emit("newChallenge", channel, socket.username, key);
 }
 
-exports.addInvite = function(users, creator, key, user) {
+exports.addInvite = function(users, channel, creator, key, user) {
 	if (typeof(users[user].games[creator]) == "undefined") {
 		users[user].games[creator] = [];
 	}
@@ -110,11 +110,10 @@ exports.closeGame = function(users, creator, key, confirm) {
 	}
 }
 
-exports.cancelInvitation = function(socket, creator, key, username) {
+exports.cancelInvitation = function(users, socket, key, invited, status) {
 	if (status == GAME_JOINED) {
 		// remove the user from participants
-		var index = users[socket.username].games[socket.username][key].participants.indexOf(invited);
-		users[socket.username].games[socket.username][key].participants.splice(index, 1);
+		delete users[socket.username].games[socket.username][key].participants[invited];
 		if (typeof users[invited] != "undefined") {
 			// leave game chatroom
 			users[invited].leave(getGameRoomName(socket.username, key));

@@ -13,7 +13,7 @@ var db = require('./chat.db');
 var PERSIST_DATA = false;
 // Should the user be online when they are invited to a game?
 var REQUIRE_INVITED_ONLINE = true;
-var MAX_USERS_PER_GAME = 2;
+var MAX_USERS_PER_GAME = 3;
 var MAX_GAMES_CREATED_PER_USER = 1;
 
 // Private channel prefix
@@ -61,12 +61,12 @@ doesGameExist = function(contype, resource, creator, key, callback) {
 
 doesParticipantExist = function(contype, resource, socket, creator, key, username, callback) {
 	if (typeof users[username] != "undefined") {
-		local.doesParticipantExist(users, creator, key, username, function() {
+		local.doesParticipantExist(users, creator, key, username, function(isValid, status) {
 			callback(isValid, status);
 		});
 	} else if (PERSIST_DATA) {
-		db.doesParticipantExist(contype, resource, creator, key, username, function(result) {
-			callback(result);
+		db.doesParticipantExist(contype, resource, creator, key, username, function(result, status) {
+			callback(result, status);
 		});
 	} else {
 		callback(false);
@@ -247,7 +247,6 @@ module.exports = function(io, pool) {
 			}
 		});
 		
-		// Should be ok for persist mode
 		socket.on('createChallenge', function(channel, invited) {
 			//Todo: check that the user is actually on the channel the challenge was sent from
 			// also check if the challenge has already been sent
@@ -271,7 +270,6 @@ module.exports = function(io, pool) {
 			}
 		});
 		
-		// should be ready for persist mode
 		socket.on('inviteToExistingChallenge', function(channel, user, key) {
 			var isOnline = typeof users[user] != "undefined";
 			if (REQUIRE_INVITED_ONLINE && isOnline) {
@@ -279,28 +277,30 @@ module.exports = function(io, pool) {
 					if (PERSIST_DATA) {
 						db.getCon("pool", pool, function(connection) {
 							db.addInvite("con", connection, socket.username, key, user, function() {
-								local.addInvite(users, socket.username, key, user);
+								local.addInvite(users, channel, socket.username, key, user);
+								socket.emit("inviteStatus", user, key, true);
 								connection.end();
 							});
 						});
 					} else {
-						local.addInvite(users, socket.username, key, user);
+						local.addInvite(users, channel, socket.username, key, user);
+						socket.emit("inviteStatus", user, key, true);
 					}
 				}
 			} else if (!REQUIRE_INVITED_ONLINE && !isOnline && PERSIST_DATA) {
 				db.getCon("pool", pool, function(connection) {
 					db.addInvite("con", connection, socket.username, key, user, function() {
-						users[socket.username].games[socket.username][key].invited.push(user);	
+						users[socket.username].games[socket.username][key].invited.push(user);
+						socket.emit("inviteStatus", user, key, true);
 						connection.end();
 					});
 				});
-			}	
+			}
 		});
 		
-		// should be ready for persist mode
 		socket.on('acceptChallenge', function(creator, key) {
 			getCon("pool", pool, function(connection) {
-				doesGameExist("con", connection, socket, creator, key, function(success) {
+				doesGameExist("con", connection, creator, key, function(success) {
 					// Check that the challenge has actually been sent in order to prevent faking accept
 					if (success && getGameStatus(socket.games, creator, key) == GAME_INVITED) {
 						acceptChallenge("con", connection, creator, key, socket, function() {
@@ -314,10 +314,9 @@ module.exports = function(io, pool) {
 			});
 		});
 		
-		//should be ok for persist mode
 		socket.on('refuseChallenge', function(creator, key) {
 			db.getCon("pool", pool, function(connection) {
-				doesGameExist("con", connection, socket, creator, key, function(success) {
+				doesGameExist("con", connection, creator, key, function(success) {
 					if (success == true && getGameStatus(socket.games, creator, key) == GAME_INVITED) {
 						refuseChallenge("con", connection, socket, creator, key);
 						connection.end();
@@ -326,22 +325,21 @@ module.exports = function(io, pool) {
 			});
 		});
 		
-		// should be persist mode ready
 		// Game creator cancelled invitation for one user
 		socket.on('cancelInvitation', function(invited, key) {
 			var creator = socket.username;
 			db.getCon("pool", pool, function(connection) {
 				doesGameExist("con", connection, creator, key, function(gameExists) {
 					if (gameExists) {
-						doesParticipantExist("con", connection, socket, creator, key, username, function(success, status) {
+						doesParticipantExist("con", connection, socket, creator, key, invited, function(success, status) {
 							if (success) {
 								if (PERSIST_DATA) {
-									db.cancelInvitation("con", connection, socket, creator, key, username, function() {
-										local.cancelInvitation(socket, creator, key, username);
+									db.cancelInvitation("con", connection, socket, creator, key, invited, function() {
+										local.cancelInvitation(users, socket, key, invited, status);
 										connection.end();
 									});
 								} else {
-									local.cancelInvitation(socket, creator, key, username);
+									local.cancelInvitation(users, socket, key, invited, status);
 								}
 							}
 						});
@@ -353,7 +351,7 @@ module.exports = function(io, pool) {
 		// One of the participants cancelled
 		socket.on('cancelChallenge', function(creator, key) {
 			db.getCon("pool", pool, function(connection) {
-				doesGameExist("con", connection, socket, creator, key, function(gameExists) {
+				doesGameExist("con", connection, creator, key, function(gameExists) {
 					if (gameExists) {
 						if (getGameStatus(socket.games, creator, key) == GAME_JOINED) {
 							cancelParticipation("con", connection, creator, key, socket.username, true);
@@ -364,7 +362,6 @@ module.exports = function(io, pool) {
 			});
 		});
 		
-		// persist mode ready
 		// Game creator closed the game
 		socket.on('closeChallenge', function(key) {
 			if (typeof socket.games[socket.username] != "undefined" 
@@ -380,7 +377,6 @@ module.exports = function(io, pool) {
 			}
 		});
 		
-		// almost persist mode ready
 		socket.on('disconnect', function() {
 			if (!PERSIST_DATA) {
 				// close all created games
