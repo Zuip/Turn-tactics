@@ -46,14 +46,15 @@ Chat.Events = function(chat) {
 			}
 		});
 		
-		chat.socket.on('username', function(username) {
-			chat.username = username;
+		chat.socket.on('serverinfo', function(data) {
+			chat.username = data.username;
+			chat.userlevel = data.userlevel;
 		});
 	
 		chat.socket.on('messageDelivered', function(channel, status){
 			chat.chatInputText.attr("disabled", false);
 			if (status == true) {
-				chat.Messages.addChatMessage(channel, chat.username, chat.chatInputText.val(), "normal");
+				chat.Messages.addChatMessage(channel, {username: chat.username, userlevel: chat.userlevel}, chat.chatInputText.val(), "normal");
 				if (chat.Tabs.currentTab.type == chat.Tabs.TAB_CHANNEL &&
 				chat.Tabs.currentTab.channel == channel) {
 					chat.Tabs.updateMessageList(channel);
@@ -77,8 +78,9 @@ Chat.Events = function(chat) {
 				source = chat.Games.getGame(creator, key).textInput;
 			}
 			source.attr("disabled", false);
-			chat.Games.getGame(creator, key).chatMessages.push({time: new Date(), sender: chat.username, 
-			msg: source.val(), type: "normal"});
+			var data = {time: new Date(), sender: {username: chat.username, userlevel: chat.userlevel}, 
+			msg: source.val(), type: "normal"};
+			chat.Games.getGame(creator, key).chatMessages.push(data);
 			source.val("");
 			
 			if (chat.GAMETABS == false) {
@@ -96,7 +98,7 @@ Chat.Events = function(chat) {
 		
 		chat.socket.on('gameMessage', function(creator, key, userdata, message) {
 			if (chat.Games.isGameDefined(creator, key)) {
-				chat.Games.getGame(creator, key).chatMessages.push({time: new Date(), sender: userdata.username, msg: message, type: "normal"});
+				chat.Games.getGame(creator, key).chatMessages.push({time: new Date(), sender: userdata, msg: message, type: "normal"});
 				
 				if (chat.GAMETABS == false) {
 					chat.Tabs.updateGameMessageList(chat.Games.getGame(creator, key).chatDiv, creator, key);
@@ -112,7 +114,7 @@ Chat.Events = function(chat) {
 		});
 		
 		chat.socket.on('chatMessage', function(channel, userdata, message) {
-			chat.Messages.addChatMessage(channel, userdata.username, message, "normal");
+			chat.Messages.addChatMessage(channel, userdata, message, "normal");
 			if (chat.Tabs.currentTab.type == chat.Tabs.TAB_CHANNEL
 			&& chat.Tabs.currentTab.channel == channel) {
 				chat.Tabs.updateMessageList(channel);
@@ -123,8 +125,32 @@ Chat.Events = function(chat) {
 			chat.Games.createEntryIfndef("challenged", user);
 			chat.Games.createEntryIfndef("games", chat.username);
 			chat.Games.createGame(chat.username, key, 
-			{empty: true, participants: [], invited: 1, chatMessages: []});
+			{empty: true, participants: [], invited: [user], chatMessages: []});
 			chat.Games.setChallengedByMe(user, key, true);
+			// create game window or tab
+			chat.Games.createGameChannel(chat.username, key);
+			
+		});
+		
+		chat.socket.on('ongoingChallenge', function(data) {
+			var creator = data.creator;
+			var key = data.key;
+			chat.Games.createEntryIfndef("games", creator);
+			chat.Games.createGame(creator, key, 
+			{empty: true, participants: data.participants, invited: [], chatMessages: []});
+			for (var i in data.invited) {
+				chat.Games.addGameInvited(creator, key, data.invited[i].username);
+				chat.Games.createEntryIfndef("challenged", data.invited[i].username);
+				chat.Games.setChallengedByMe(data.invited[i].username, key, true);
+			}
+			chat.Games.createGameChannel(creator, key);
+		});
+		
+		chat.socket.on('pendingChallenge', function(data) {
+			chat.Games.createEntryIfndef("challenges", data.creator);
+			chat.Games.setChallenged(data.creator, data.key, true);
+			chat.Messages.addMessage({type: "current"}, {type: "challenge", challenger: data.creator, key: data.key});
+			chat.Tabs.updateCurrentTab();
 		});
 		
 		chat.socket.on('newChallenge', function(channel, user, key) {
@@ -148,17 +174,15 @@ Chat.Events = function(chat) {
 		});
 		
 		// confirmation that the challenge was closed successfully
-		chat.socket.on('challengeCloseSuccessful', function(key) {});
+		chat.socket.on('challengeCloseSuccessful', function(key) {
+			chat.Games.closeFinal(key);
+		});
 		
 		// one of the participants cancelled the challenge
 		chat.socket.on('challengeCancelled', function(user, key, leaver) {
 		
-			var closed = false;
 			if (user == chat.username) {
-				// Sent challenges:
-				// if every participant cancels, close the game
 				chat.Games.removeParticipant(chat.username, key, leaver);
-				closed = chat.Games.checkGameCloseEvent(key);
 
 				// delete challenge record
 				if (chat.Games.doesChallengeByMeExist(leaver, key)) {
@@ -169,7 +193,7 @@ Chat.Events = function(chat) {
 				// if the game isn't user's own, it means that one of the other participants left
 				chat.Games.removeParticipant(user, key, leaver);
 			}
-			if (chat.GAMETABS == false && closed == false) {
+			if (chat.GAMETABS == false) {
 				chat.Games.updateChallengeWindow(user, key);
 			}
 			chat.Tabs.updateCurrentTab();
@@ -194,24 +218,13 @@ Chat.Events = function(chat) {
 		// New participant on challenge
 		chat.socket.on('challengeAccepted', function(user, key, joiner) {
 			if (chat.username == user) {
-				chat.Games.addGameInvited(chat.username, key, -1);
+				chat.Games.deleteInvited(chat.username, key, joiner);
 				chat.Messages.addMessage({type: "current"}, {type: "challengeAccepted", challenger: joiner});
 				chat.Tabs.updateCurrentTab();
-				// create window only if it hasn't been already created
-				if (chat.Games.getGame(chat.username, key).empty == true) {
-					if (chat.GAMETABS == false) {
-						chat.Games.createChallengeWindow(chat.username, key);
-					}
-					if (chat.GAMETABS == true) {
-						chat.Tabs.createGameTab(chat.username, key, false);
-					}
-					chat.Games.getGame(chat.username, key).empty = false;
-				}
-				
 			} else {
 				//Todo: other kind of message
 			}
-			chat.Games.getGameParticipants(user, key).push(joiner);
+			chat.Games.addParticipant(user, key, joiner, {accepted: false});
 			if (chat.GAMETABS == false) {
 				chat.Games.updateChallengeWindow(user, key);
 			}
@@ -225,7 +238,7 @@ Chat.Events = function(chat) {
 		// This doesn't currently close the game if the only invited user refused
 		chat.socket.on('challengeRefused', function(user, key) {
 			chat.Games.setChallengedByMe(user, key, false);
-			chat.Games.addGameInvited(chat.username, key, -1);
+			chat.Games.deleteInvited(chat.username, key, user);
 			chat.Messages.addMessage({type: "current"}, {type: "challengeRefused", challenger: user});
 			chat.Tabs.updateCurrentTab();
 		});

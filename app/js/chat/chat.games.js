@@ -61,7 +61,7 @@ Chat.Games = function(chat) {
 	};
 	
 	this.deleteChallenge = function(user, game) {
-		this.challenges[user][game];
+		delete this.challenges[user][game];
 	};
 	
 	this.setChallengedByMe = function(user, game, status) {
@@ -104,12 +104,34 @@ Chat.Games = function(chat) {
 		this.games[user][game].participants = participants;
 	};
 	
+	this.addParticipant = function(user, game, participant, data) {
+		this.games[user][game].participants[participant] = data;
+	};
+	
 	this.getGameInvited = function(user, game) {
 		return this.games[user][game].invited;
 	};
 	
-	this.addGameInvited = function(user, game, amount) {
-		this.games[user][game].invited = this.games[user][game].invited + amount;
+	this.addGameInvited = function(user, game, inv) {
+		this.games[user][game].invited.push(inv);
+	};
+	
+	this.deleteInvited = function(user, game, invited) {
+		var index = this.games[user][game].invited.indexOf(invited);
+		this.games[user][game].invited.splice(index, 1);
+	}
+	
+	this.createGameChannel = function(user, key) {
+		if (this.getGame(user, key).empty == true) {
+			if (chat.GAMETABS == false) {
+				this.createChallengeWindow(user, key);
+				this.updateChallengeWindow(user, key);
+			}
+			if (chat.GAMETABS == true) {
+				chat.Tabs.createGameTab(user, key, false);
+			}
+			this.getGame(user, key).empty = false;
+		}
 	};
 	
 	this.createChallengeWindow = function(user, key) {
@@ -131,11 +153,14 @@ Chat.Games = function(chat) {
 			}
 		});
 		
-		this.games[user][key] = {window: challengeWindow, participants: [],
-		userList: userList, chatMessages: [], chatDiv: chatDiv, textInput: textInput};
+		this.games[user][key].window = challengeWindow;
+		this.games[user][key].userList = userList;
+		this.games[user][key].chatDiv = chatDiv;
+		this.games[user][key].textInput = textInput;
 		
 		var self = this;
 		challengeWindow.bind('dialogclose', function(event) {
+			// cancels challenge creator invite data
 			if (typeof(self.challenges[user]) != "undefined" && 
 			typeof(self.challenges[user][key]) != "undefined") {
 				delete self.challenges[user][key];
@@ -145,13 +170,8 @@ Chat.Games = function(chat) {
 				chat.socket.emit("cancelChallenge", user, key);
 				delete self.games[user][key];
 			} else {
-				//delete challenge records
-				for (var participant in self.games[chat.username][key].participants) {
-					delete self.challenged[self.games[chat.username][key].participants[participant]][key];
-				}
 				chat.socket.emit("closeChallenge", key);
 			}
-			delete self.games[user][key];
 		});
 		
 		challengeWindow.dialog();
@@ -161,32 +181,41 @@ Chat.Games = function(chat) {
 	this.updateChallengeWindow = function(user, key) {
 		this.games[user][key].userList.empty();
 		var creator = $('<div>', { html: "Users: <br>"+user }).appendTo(this.games[user][key].userList);
-		for (var i=0; i<this.games[user][key].participants.length; ++i) {
-			var participant = $('<div>', { text: this.games[user][key].participants[i] }).appendTo(this.games[user][key].userList);
+		for (var p in this.games[user][key].participants) {
+			var userText = chat.Tabs.escapeHTML(p);
+			var participant = $('<div>', { html: userText }).appendTo(this.games[user][key].userList);
 		}
 	};
 
 	// An user left a game
 	// This keeps context menus and setup window updated
 	this.removeParticipant = function(user, key, removed) {
-		var index = this.games[user][key].participants.indexOf(removed);
-		this.games[user][key].participants.splice(index, 1);
+		delete this.games[user][key].participants[removedremoved];
 	};
 	
 	// Closes game if no participants and invites are left
 	this.checkGameCloseEvent = function(key) {
-		if (this.games[chat.username][key].participants.length == 0) {
-			if (this.games[chat.username][key].invited > 0) {
-				return false;
-			}
-			this.closeGame(key);
-			return true;
+		for (var p in this.games[chat.username][key].participants) {
+			return false;
 		}
-		return false;
+		if (this.games[chat.username][key].invited.length > 0) {
+			return false;
+		}
+		this.closeGame(key);
+		return true;
 	};
 	
 	// Game creator closes game
 	this.closeGame = function(key) {
+		chat.socket.emit("closeChallenge", key);
+	};
+	
+	// Deletes game data
+	this.closeFinal = function(key) {
+		// delete invited
+		for (var inv in this.games[chat.username][key].invited) {
+			delete this.challenged[this.games[chat.username][key].invited[inv]][key];
+		}
 		if (typeof this.games[chat.username][key].window != "undefined") {
 			this.games[chat.username][key].window.dialog("close");
 		}
@@ -194,8 +223,7 @@ Chat.Games = function(chat) {
 			chat.Tabs.deleteTab({type: chat.Tabs.TAB_GAME, creator: chat.username, key: key});
 		}
 		delete this.games[chat.username][key];
-		chat.socket.emit("closeChallenge", key);
-	};
+	}
 	
 	// helper function to reduce repetition of definition checks
 	this.createEntryIfndef = function(entrytype, user) {

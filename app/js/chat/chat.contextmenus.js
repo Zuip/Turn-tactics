@@ -72,13 +72,13 @@ Chat.ContextMenus = function(chat) {
 			chat.socket.emit('inviteToExistingChallenge', chat.Tabs.currentTab.channel, username, gamekey);
 			chat.Games.createEntryIfndef("challenged", username);
 			chat.Games.setChallengedByMe(username, gamekey, true);
-			chat.Games.addGameInvited(chat.username, gamekey, 1);
+			chat.Games.addGameInvited(chat.username, gamekey, username);
 		} else if (key.substr(0, 6) == "cancel") {
 			var gamekey = key.substr(7);
 			chat.socket.emit('cancelInvitation', username, gamekey);
 			if (chat.Games.doesChallengeByMeExist(username, gamekey)) {
 				chat.Games.deleteMyChallengeToUser(username, gamekey);
-				chat.Games.addGameInvited(chat.username, gamekey, -1);
+				chat.Games.deleteInvited(chat.username, gamekey, username);
 			} else {
 				chat.Games.removeParticipant(chat.username, gamekey, username);
 			}

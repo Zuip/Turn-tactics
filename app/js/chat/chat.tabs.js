@@ -192,6 +192,11 @@ Chat.Tabs = function(chat) {
 		}
 	};
 	
+	this.escapeHTML = function(msg) {
+		msg.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+		return msg;
+	};
+	
 	this.updateMessageList = function(channel) {
 	
 		var onBottom = this.isScrollOnBottom(chat.msgWindow);
@@ -207,10 +212,8 @@ Chat.Tabs = function(chat) {
 					classes = "challenge";
 				}
 				
-				var message = $('<div>', {
-					text: chat.Messages.formatMessage(chat.Messages.messages[channel][i]),
-					class: classes
-				}).appendTo(chat.msgWindow);
+				var message = this.createMessageDiv(chat.Messages.messages[channel][i], classes)
+				.appendTo(chat.msgWindow);
 				
 				if (chat.Messages.messages[channel][i].type == "challenge") {
 					message.data("challenger", chat.Messages.messages[channel][i].challenger);
@@ -233,10 +236,8 @@ Chat.Tabs = function(chat) {
 		if (chat.Games.isGameDefined(creator, key)) {
 			var messages = chat.Games.getGame(creator, key).chatMessages;
 			
-			for (var i=0; i<messages.length; ++i) {
-				var message = $('<div>', {
-					text: chat.Messages.formatMessage(messages[i])
-				}).appendTo(target);
+			for (var msgid in messages) {
+				var message = this.createMessageDiv(messages[msgid]).appendTo(target);
 			};
 		}
 		
@@ -244,6 +245,15 @@ Chat.Tabs = function(chat) {
 			this.scrollToBottom(chat.msgWindow);
 		}
 	};
+	
+	this.createMessageDiv = function(message, classes) {
+		var timestamp = chat.Messages.getMessageTime(message);
+		var msg = chat.Messages.formatMessage(message);
+		var msgDiv = $('<div>', {
+			html: timestamp + msg,
+			class: classes});
+		return msgDiv;
+	}
 	
 	this.updateUserList = function(channel) {
 		
@@ -270,14 +280,14 @@ Chat.Tabs = function(chat) {
 		
 		if (chat.Games.isGameDefined(creator, key)) {
 			var participants = chat.Games.getGame(creator, key).participants.slice();
-			participants.splice(0, 0, creator);
+			participants[creator] = {};
 			for (var user in participants) {
 				var userEntry = $('<div>', {
-				id: 'user-'+participants[user],
+				id: 'user-'+user,
 				class: 'chatuser',
 				text: participants[user]
 				}).appendTo(this.userList);
-				if (participants[user] == chat.username) {
+				if (user == chat.username) {
 					userEntry.addClass('chat_userself');
 				}
 			}

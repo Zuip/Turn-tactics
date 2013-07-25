@@ -57,28 +57,39 @@ Chat.Messages = function(chat) {
 		element.attr("disabled", true);
 	};
 
+	this.getMessageTime = function(message) {
+		return "["+message.time.getHours() + ":" + ("0"+message.time.getMinutes()).slice(-2)+"] ";
+	};
+	
 	this.formatMessage = function(message) {
-		var time = "["+message.time.getHours() + ":"
-					+ ("0"+message.time.getMinutes()).slice(-2)+"] ";
 		var formatted = "";
 		if (message.type == "normal") {
-			formatted = time + message.sender + ": "+ message.msg;
+			formatted = this.formatUser(message.sender) + ": " + chat.Tabs.escapeHTML(message.msg);
 		} else if (message.type == "notice") {
-			formatted = time + message.msg;
+			formatted = message.msg;
 		} else if (message.type == "challenge") {
-			formatted = time + message.challenger + " has challenged you";
+			formatted = chat.Tabs.escapeHTML(message.challenger) + " has challenged you";
 		} else if (message.type == "challengeCancelled") {
-			formatted = time + message.participant + " cancelled the challenge";
+			formatted = chat.Tabs.escapeHTML(message.participant) + " cancelled the challenge";
 		} else if (message.type == "invitationCancelled") {
-			formatted = time + message.creator + " cancelled challenge invitation";
+			formatted = chat.Tabs.escapeHTML(message.creator) + " cancelled challenge invitation";
 		} else if (message.type == "gameClosed") {
-			formatted = time + message.creator + " closed the game";
+			formatted = chat.Tabs.escapeHTML(message.creator) + " closed the game";
 		} else if (message.type == "challengeAccepted") {
-			formatted = time + message.challenger + " accepted your challenge";
+			formatted = chat.Tabs.escapeHTML(message.challenger) + " accepted your challenge";
 		} else if (message.type == "challengeRefused") {
-			formatted = time + message.challenger + " refused your challenge";
+			formatted = chat.Tabs.escapeHTML(message.challenger) + " refused your challenge";
 		}
 		return formatted;
 	};
+	
+	this.formatUser = function(user) {
+		if (user.userlevel == 1) {
+			return "<span class=\"mod_user\">[MOD]</span> " + chat.Tabs.escapeHTML(user.username);
+		} else if (user.userlevel == 2) {
+			return "<span class=\"admin_user\">[ADMIN]</span> "+ chat.Tabs.escapeHTML(user.username);
+		}
+		return chat.Tabs.escapeHTML(user.username);
+	}
 	
 };

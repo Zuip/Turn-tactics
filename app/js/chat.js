@@ -236,13 +236,13 @@ Chat.ContextMenus = function(chat) {
 			chat.socket.emit('inviteToExistingChallenge', chat.Tabs.currentTab.channel, username, gamekey);
 			chat.Games.createEntryIfndef("challenged", username);
 			chat.Games.setChallengedByMe(username, gamekey, true);
-			chat.Games.addGameInvited(chat.username, gamekey, 1);
+			chat.Games.addGameInvited(chat.username, gamekey, username);
 		} else if (key.substr(0, 6) == "cancel") {
 			var gamekey = key.substr(7);
 			chat.socket.emit('cancelInvitation', username, gamekey);
 			if (chat.Games.doesChallengeByMeExist(username, gamekey)) {
 				chat.Games.deleteMyChallengeToUser(username, gamekey);
-				chat.Games.addGameInvited(chat.username, gamekey, -1);
+				chat.Games.deleteInvited(chat.username, gamekey, username);
 			} else {
 				chat.Games.removeParticipant(chat.username, gamekey, username);
 			}
@@ -343,14 +343,15 @@ Chat.Events = function(chat) {
 			}
 		});
 		
-		chat.socket.on('username', function(username) {
-			chat.username = username;
+		chat.socket.on('serverinfo', function(data) {
+			chat.username = data.username;
+			chat.userlevel = data.userlevel;
 		});
 	
 		chat.socket.on('messageDelivered', function(channel, status){
 			chat.chatInputText.attr("disabled", false);
 			if (status == true) {
-				chat.Messages.addChatMessage(channel, chat.username, chat.chatInputText.val(), "normal");
+				chat.Messages.addChatMessage(channel, {username: chat.username, userlevel: chat.userlevel}, chat.chatInputText.val(), "normal");
 				if (chat.Tabs.currentTab.type == chat.Tabs.TAB_CHANNEL &&
 				chat.Tabs.currentTab.channel == channel) {
 					chat.Tabs.updateMessageList(channel);
@@ -374,8 +375,9 @@ Chat.Events = function(chat) {
 				source = chat.Games.getGame(creator, key).textInput;
 			}
 			source.attr("disabled", false);
-			chat.Games.getGame(creator, key).chatMessages.push({time: new Date(), sender: chat.username, 
-			msg: source.val(), type: "normal"});
+			var data = {time: new Date(), sender: {username: chat.username, userlevel: chat.userlevel}, 
+			msg: source.val(), type: "normal"};
+			chat.Games.getGame(creator, key).chatMessages.push(data);
 			source.val("");
 			
 			if (chat.GAMETABS == false) {
@@ -393,7 +395,7 @@ Chat.Events = function(chat) {
 		
 		chat.socket.on('gameMessage', function(creator, key, userdata, message) {
 			if (chat.Games.isGameDefined(creator, key)) {
-				chat.Games.getGame(creator, key).chatMessages.push({time: new Date(), sender: userdata.username, msg: message, type: "normal"});
+				chat.Games.getGame(creator, key).chatMessages.push({time: new Date(), sender: userdata, msg: message, type: "normal"});
 				
 				if (chat.GAMETABS == false) {
 					chat.Tabs.updateGameMessageList(chat.Games.getGame(creator, key).chatDiv, creator, key);
@@ -409,7 +411,7 @@ Chat.Events = function(chat) {
 		});
 		
 		chat.socket.on('chatMessage', function(channel, userdata, message) {
-			chat.Messages.addChatMessage(channel, userdata.username, message, "normal");
+			chat.Messages.addChatMessage(channel, userdata, message, "normal");
 			if (chat.Tabs.currentTab.type == chat.Tabs.TAB_CHANNEL
 			&& chat.Tabs.currentTab.channel == channel) {
 				chat.Tabs.updateMessageList(channel);
@@ -420,8 +422,32 @@ Chat.Events = function(chat) {
 			chat.Games.createEntryIfndef("challenged", user);
 			chat.Games.createEntryIfndef("games", chat.username);
 			chat.Games.createGame(chat.username, key, 
-			{empty: true, participants: [], invited: 1, chatMessages: []});
+			{empty: true, participants: [], invited: [user], chatMessages: []});
 			chat.Games.setChallengedByMe(user, key, true);
+			// create game window or tab
+			chat.Games.createGameChannel(chat.username, key);
+			
+		});
+		
+		chat.socket.on('ongoingChallenge', function(data) {
+			var creator = data.creator;
+			var key = data.key;
+			chat.Games.createEntryIfndef("games", creator);
+			chat.Games.createGame(creator, key, 
+			{empty: true, participants: data.participants, invited: [], chatMessages: []});
+			for (var i in data.invited) {
+				chat.Games.addGameInvited(creator, key, data.invited[i].username);
+				chat.Games.createEntryIfndef("challenged", data.invited[i].username);
+				chat.Games.setChallengedByMe(data.invited[i].username, key, true);
+			}
+			chat.Games.createGameChannel(creator, key);
+		});
+		
+		chat.socket.on('pendingChallenge', function(data) {
+			chat.Games.createEntryIfndef("challenges", data.creator);
+			chat.Games.setChallenged(data.creator, data.key, true);
+			chat.Messages.addMessage({type: "current"}, {type: "challenge", challenger: data.creator, key: data.key});
+			chat.Tabs.updateCurrentTab();
 		});
 		
 		chat.socket.on('newChallenge', function(channel, user, key) {
@@ -445,17 +471,15 @@ Chat.Events = function(chat) {
 		});
 		
 		// confirmation that the challenge was closed successfully
-		chat.socket.on('challengeCloseSuccessful', function(key) {});
+		chat.socket.on('challengeCloseSuccessful', function(key) {
+			chat.Games.closeFinal(key);
+		});
 		
 		// one of the participants cancelled the challenge
 		chat.socket.on('challengeCancelled', function(user, key, leaver) {
 		
-			var closed = false;
 			if (user == chat.username) {
-				// Sent challenges:
-				// if every participant cancels, close the game
 				chat.Games.removeParticipant(chat.username, key, leaver);
-				closed = chat.Games.checkGameCloseEvent(key);
 
 				// delete challenge record
 				if (chat.Games.doesChallengeByMeExist(leaver, key)) {
@@ -466,7 +490,7 @@ Chat.Events = function(chat) {
 				// if the game isn't user's own, it means that one of the other participants left
 				chat.Games.removeParticipant(user, key, leaver);
 			}
-			if (chat.GAMETABS == false && closed == false) {
+			if (chat.GAMETABS == false) {
 				chat.Games.updateChallengeWindow(user, key);
 			}
 			chat.Tabs.updateCurrentTab();
@@ -491,24 +515,13 @@ Chat.Events = function(chat) {
 		// New participant on challenge
 		chat.socket.on('challengeAccepted', function(user, key, joiner) {
 			if (chat.username == user) {
-				chat.Games.addGameInvited(chat.username, key, -1);
+				chat.Games.deleteInvited(chat.username, key, joiner);
 				chat.Messages.addMessage({type: "current"}, {type: "challengeAccepted", challenger: joiner});
 				chat.Tabs.updateCurrentTab();
-				// create window only if it hasn't been already created
-				if (chat.Games.getGame(chat.username, key).empty == true) {
-					if (chat.GAMETABS == false) {
-						chat.Games.createChallengeWindow(chat.username, key);
-					}
-					if (chat.GAMETABS == true) {
-						chat.Tabs.createGameTab(chat.username, key, false);
-					}
-					chat.Games.getGame(chat.username, key).empty = false;
-				}
-				
 			} else {
 				//Todo: other kind of message
 			}
-			chat.Games.getGameParticipants(user, key).push(joiner);
+			chat.Games.addParticipant(user, key, joiner, {accepted: false});
 			if (chat.GAMETABS == false) {
 				chat.Games.updateChallengeWindow(user, key);
 			}
@@ -522,7 +535,7 @@ Chat.Events = function(chat) {
 		// This doesn't currently close the game if the only invited user refused
 		chat.socket.on('challengeRefused', function(user, key) {
 			chat.Games.setChallengedByMe(user, key, false);
-			chat.Games.addGameInvited(chat.username, key, -1);
+			chat.Games.deleteInvited(chat.username, key, user);
 			chat.Messages.addMessage({type: "current"}, {type: "challengeRefused", challenger: user});
 			chat.Tabs.updateCurrentTab();
 		});
@@ -681,7 +694,7 @@ Chat.Games = function(chat) {
 	};
 	
 	this.deleteChallenge = function(user, game) {
-		this.challenges[user][game];
+		delete this.challenges[user][game];
 	};
 	
 	this.setChallengedByMe = function(user, game, status) {
@@ -724,12 +737,34 @@ Chat.Games = function(chat) {
 		this.games[user][game].participants = participants;
 	};
 	
+	this.addParticipant = function(user, game, participant, data) {
+		this.games[user][game].participants[participant] = data;
+	};
+	
 	this.getGameInvited = function(user, game) {
 		return this.games[user][game].invited;
 	};
 	
-	this.addGameInvited = function(user, game, amount) {
-		this.games[user][game].invited = this.games[user][game].invited + amount;
+	this.addGameInvited = function(user, game, inv) {
+		this.games[user][game].invited.push(inv);
+	};
+	
+	this.deleteInvited = function(user, game, invited) {
+		var index = this.games[user][game].invited.indexOf(invited);
+		this.games[user][game].invited.splice(index, 1);
+	}
+	
+	this.createGameChannel = function(user, key) {
+		if (this.getGame(user, key).empty == true) {
+			if (chat.GAMETABS == false) {
+				this.createChallengeWindow(user, key);
+				this.updateChallengeWindow(user, key);
+			}
+			if (chat.GAMETABS == true) {
+				chat.Tabs.createGameTab(user, key, false);
+			}
+			this.getGame(user, key).empty = false;
+		}
 	};
 	
 	this.createChallengeWindow = function(user, key) {
@@ -751,11 +786,14 @@ Chat.Games = function(chat) {
 			}
 		});
 		
-		this.games[user][key] = {window: challengeWindow, participants: [],
-		userList: userList, chatMessages: [], chatDiv: chatDiv, textInput: textInput};
+		this.games[user][key].window = challengeWindow;
+		this.games[user][key].userList = userList;
+		this.games[user][key].chatDiv = chatDiv;
+		this.games[user][key].textInput = textInput;
 		
 		var self = this;
 		challengeWindow.bind('dialogclose', function(event) {
+			// cancels challenge creator invite data
 			if (typeof(self.challenges[user]) != "undefined" && 
 			typeof(self.challenges[user][key]) != "undefined") {
 				delete self.challenges[user][key];
@@ -765,13 +803,8 @@ Chat.Games = function(chat) {
 				chat.socket.emit("cancelChallenge", user, key);
 				delete self.games[user][key];
 			} else {
-				//delete challenge records
-				for (var participant in self.games[chat.username][key].participants) {
-					delete self.challenged[self.games[chat.username][key].participants[participant]][key];
-				}
 				chat.socket.emit("closeChallenge", key);
 			}
-			delete self.games[user][key];
 		});
 		
 		challengeWindow.dialog();
@@ -781,32 +814,41 @@ Chat.Games = function(chat) {
 	this.updateChallengeWindow = function(user, key) {
 		this.games[user][key].userList.empty();
 		var creator = $('<div>', { html: "Users: <br>"+user }).appendTo(this.games[user][key].userList);
-		for (var i=0; i<this.games[user][key].participants.length; ++i) {
-			var participant = $('<div>', { text: this.games[user][key].participants[i] }).appendTo(this.games[user][key].userList);
+		for (var p in this.games[user][key].participants) {
+			var userText = chat.Tabs.escapeHTML(p);
+			var participant = $('<div>', { html: userText }).appendTo(this.games[user][key].userList);
 		}
 	};
 
 	// An user left a game
 	// This keeps context menus and setup window updated
 	this.removeParticipant = function(user, key, removed) {
-		var index = this.games[user][key].participants.indexOf(removed);
-		this.games[user][key].participants.splice(index, 1);
+		delete this.games[user][key].participants[removedremoved];
 	};
 	
 	// Closes game if no participants and invites are left
 	this.checkGameCloseEvent = function(key) {
-		if (this.games[chat.username][key].participants.length == 0) {
-			if (this.games[chat.username][key].invited > 0) {
-				return false;
-			}
-			this.closeGame(key);
-			return true;
+		for (var p in this.games[chat.username][key].participants) {
+			return false;
 		}
-		return false;
+		if (this.games[chat.username][key].invited.length > 0) {
+			return false;
+		}
+		this.closeGame(key);
+		return true;
 	};
 	
 	// Game creator closes game
 	this.closeGame = function(key) {
+		chat.socket.emit("closeChallenge", key);
+	};
+	
+	// Deletes game data
+	this.closeFinal = function(key) {
+		// delete invited
+		for (var inv in this.games[chat.username][key].invited) {
+			delete this.challenged[this.games[chat.username][key].invited[inv]][key];
+		}
 		if (typeof this.games[chat.username][key].window != "undefined") {
 			this.games[chat.username][key].window.dialog("close");
 		}
@@ -814,8 +856,7 @@ Chat.Games = function(chat) {
 			chat.Tabs.deleteTab({type: chat.Tabs.TAB_GAME, creator: chat.username, key: key});
 		}
 		delete this.games[chat.username][key];
-		chat.socket.emit("closeChallenge", key);
-	};
+	}
 	
 	// helper function to reduce repetition of definition checks
 	this.createEntryIfndef = function(entrytype, user) {
@@ -896,29 +937,40 @@ Chat.Messages = function(chat) {
 		element.attr("disabled", true);
 	};
 
+	this.getMessageTime = function(message) {
+		return "["+message.time.getHours() + ":" + ("0"+message.time.getMinutes()).slice(-2)+"] ";
+	};
+	
 	this.formatMessage = function(message) {
-		var time = "["+message.time.getHours() + ":"
-					+ ("0"+message.time.getMinutes()).slice(-2)+"] ";
 		var formatted = "";
 		if (message.type == "normal") {
-			formatted = time + message.sender + ": "+ message.msg;
+			formatted = this.formatUser(message.sender) + ": " + chat.Tabs.escapeHTML(message.msg);
 		} else if (message.type == "notice") {
-			formatted = time + message.msg;
+			formatted = message.msg;
 		} else if (message.type == "challenge") {
-			formatted = time + message.challenger + " has challenged you";
+			formatted = chat.Tabs.escapeHTML(message.challenger) + " has challenged you";
 		} else if (message.type == "challengeCancelled") {
-			formatted = time + message.participant + " cancelled the challenge";
+			formatted = chat.Tabs.escapeHTML(message.participant) + " cancelled the challenge";
 		} else if (message.type == "invitationCancelled") {
-			formatted = time + message.creator + " cancelled challenge invitation";
+			formatted = chat.Tabs.escapeHTML(message.creator) + " cancelled challenge invitation";
 		} else if (message.type == "gameClosed") {
-			formatted = time + message.creator + " closed the game";
+			formatted = chat.Tabs.escapeHTML(message.creator) + " closed the game";
 		} else if (message.type == "challengeAccepted") {
-			formatted = time + message.challenger + " accepted your challenge";
+			formatted = chat.Tabs.escapeHTML(message.challenger) + " accepted your challenge";
 		} else if (message.type == "challengeRefused") {
-			formatted = time + message.challenger + " refused your challenge";
+			formatted = chat.Tabs.escapeHTML(message.challenger) + " refused your challenge";
 		}
 		return formatted;
 	};
+	
+	this.formatUser = function(user) {
+		if (user.userlevel == 1) {
+			return "<span class=\"mod_user\">[MOD]</span> " + chat.Tabs.escapeHTML(user.username);
+		} else if (user.userlevel == 2) {
+			return "<span class=\"admin_user\">[ADMIN]</span> "+ chat.Tabs.escapeHTML(user.username);
+		}
+		return chat.Tabs.escapeHTML(user.username);
+	}
 	
 };
 
@@ -1117,6 +1169,11 @@ Chat.Tabs = function(chat) {
 		}
 	};
 	
+	this.escapeHTML = function(msg) {
+		msg.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+		return msg;
+	};
+	
 	this.updateMessageList = function(channel) {
 	
 		var onBottom = this.isScrollOnBottom(chat.msgWindow);
@@ -1132,10 +1189,8 @@ Chat.Tabs = function(chat) {
 					classes = "challenge";
 				}
 				
-				var message = $('<div>', {
-					text: chat.Messages.formatMessage(chat.Messages.messages[channel][i]),
-					class: classes
-				}).appendTo(chat.msgWindow);
+				var message = this.createMessageDiv(chat.Messages.messages[channel][i], classes)
+				.appendTo(chat.msgWindow);
 				
 				if (chat.Messages.messages[channel][i].type == "challenge") {
 					message.data("challenger", chat.Messages.messages[channel][i].challenger);
@@ -1158,10 +1213,8 @@ Chat.Tabs = function(chat) {
 		if (chat.Games.isGameDefined(creator, key)) {
 			var messages = chat.Games.getGame(creator, key).chatMessages;
 			
-			for (var i=0; i<messages.length; ++i) {
-				var message = $('<div>', {
-					text: chat.Messages.formatMessage(messages[i])
-				}).appendTo(target);
+			for (var msgid in messages) {
+				var message = this.createMessageDiv(messages[msgid]).appendTo(target);
 			};
 		}
 		
@@ -1169,6 +1222,15 @@ Chat.Tabs = function(chat) {
 			this.scrollToBottom(chat.msgWindow);
 		}
 	};
+	
+	this.createMessageDiv = function(message, classes) {
+		var timestamp = chat.Messages.getMessageTime(message);
+		var msg = chat.Messages.formatMessage(message);
+		var msgDiv = $('<div>', {
+			html: timestamp + msg,
+			class: classes});
+		return msgDiv;
+	}
 	
 	this.updateUserList = function(channel) {
 		
@@ -1195,14 +1257,14 @@ Chat.Tabs = function(chat) {
 		
 		if (chat.Games.isGameDefined(creator, key)) {
 			var participants = chat.Games.getGame(creator, key).participants.slice();
-			participants.splice(0, 0, creator);
+			participants[creator] = {};
 			for (var user in participants) {
 				var userEntry = $('<div>', {
-				id: 'user-'+participants[user],
+				id: 'user-'+user,
 				class: 'chatuser',
 				text: participants[user]
 				}).appendTo(this.userList);
-				if (participants[user] == chat.username) {
+				if (user == chat.username) {
 					userEntry.addClass('chat_userself');
 				}
 			}
