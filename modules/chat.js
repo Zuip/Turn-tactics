@@ -13,8 +13,8 @@ var db = require('./chat.db');
 var PERSIST_DATA = false;
 // Should the user be online when they are invited to a game?
 var REQUIRE_INVITED_ONLINE = true;
-var MAX_USERS_PER_GAME = 3;
-var MAX_GAMES_CREATED_PER_USER = 1;
+var MAX_USERS_PER_GAME = 4;
+var MAX_GAMES_CREATED_PER_USER = 2;
 
 // Private channel prefix
 var PRIVATE_CHANNEL = true;
@@ -254,7 +254,8 @@ module.exports = function(io, pool) {
 			if (typeof (socket.games[socket.username]) == "undefined") {
 				socket.games[socket.username] = [];
 			}
-			if (invited != socket.username) {
+			if (socket.numGames < MAX_GAMES_CREATED_PER_USER
+			&& invited != socket.username) {
 				if (PERSIST_DATA) {
 					db.getCon("pool", pool, function(connection) {
 						db.createChallenge("con", connection, socket, invited, function(id) {
@@ -272,29 +273,33 @@ module.exports = function(io, pool) {
 		
 		socket.on('inviteToExistingChallenge', function(channel, user, key) {
 			var isOnline = typeof users[user] != "undefined";
-			if (REQUIRE_INVITED_ONLINE && isOnline) {
-				if (isOnline && user != socket.username) {
-					if (PERSIST_DATA) {
-						db.getCon("pool", pool, function(connection) {
-							db.addInvite("con", connection, socket.username, key, user, function() {
-								local.addInvite(users, channel, socket.username, key, user);
-								socket.emit("inviteStatus", user, key, true);
-								connection.end();
+			var playerAmount = socket.games[socket.username][key].invited.length +
+								Object.keys(socket.games[socket.username][key].participants).length + 1;
+			if (playerAmount < MAX_USERS_PER_GAME) {
+				if (REQUIRE_INVITED_ONLINE && isOnline) {
+					if (isOnline && user != socket.username) {
+						if (PERSIST_DATA) {
+							db.getCon("pool", pool, function(connection) {
+								db.addInvite("con", connection, socket.username, key, user, function() {
+									local.addInvite(users, channel, socket.username, key, user);
+									socket.emit("inviteStatus", user, key, true);
+									connection.end();
+								});
 							});
-						});
-					} else {
-						local.addInvite(users, channel, socket.username, key, user);
-						socket.emit("inviteStatus", user, key, true);
+						} else {
+							local.addInvite(users, channel, socket.username, key, user);
+							socket.emit("inviteStatus", user, key, true);
+						}
 					}
-				}
-			} else if (!REQUIRE_INVITED_ONLINE && !isOnline && PERSIST_DATA) {
-				db.getCon("pool", pool, function(connection) {
-					db.addInvite("con", connection, socket.username, key, user, function() {
-						users[socket.username].games[socket.username][key].invited.push(user);
-						socket.emit("inviteStatus", user, key, true);
-						connection.end();
+				} else if (!REQUIRE_INVITED_ONLINE && !isOnline && PERSIST_DATA) {
+					db.getCon("pool", pool, function(connection) {
+						db.addInvite("con", connection, socket.username, key, user, function() {
+							users[socket.username].games[socket.username][key].invited.push(user);
+							socket.emit("inviteStatus", user, key, true);
+							connection.end();
+						});
 					});
-				});
+				}
 			}
 		});
 		
