@@ -83,6 +83,7 @@ exports.handleLoginPost = function(req, res, data, pool, callback) {
 		if (err && err.code == 'ECONNREFUSED') {
 			data.logSuc = 0;
 			callback();
+			return;
 		} else if (err) {
 			throw err;
 		} else {
