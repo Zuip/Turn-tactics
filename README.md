@@ -11,4 +11,5 @@ USED TECHNOLOGIES:
 - HTML5
 
 MySQL database schema is available in file *database.sql*.
-Database configurations are defined in *server.js*.
+
+Database configurations are defined in *modules/database.js*.
