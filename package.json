@@ -1,0 +1,21 @@
+{
+  "name": "Turn-tactics",
+  "description": "Turn-based strategy game",
+  "contributors": [ 
+    "Sanep",
+	"Zuip"
+  ],
+  "dependencies" : {
+	"ejs" : ">=0.8.4",
+    "express" : ">=3.2.6",
+    "mysql" : ">=2.0.0-alpha8",
+	"cookie" : ">=0.1.0",
+    "path" : ">=0.4.9",
+	"crypto" : ">=0.0.3",
+	"querystring" : ">=0.2.0",
+    "socket.io" : ">=0.9.16"
+  },
+  "engines": {
+    "node": ">=0.10.10"
+  }
+}
