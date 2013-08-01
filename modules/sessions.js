@@ -17,31 +17,50 @@ function generateRandomString(length) {
 
 // Gets the needed data and handles page request using it
 // returns the data associated with the page
-exports.handlePage = function(req, res, pool, callback) {
+exports.handlePage = function(req, res, pool, data, callback) {
 	var sessionid = req.cookies.session;
-	var data = {};
-	data.username = "";
-	data.login = false;
-	data.status = 0;
+	
+	// Set default values for variables if not set in POST handling 
+	if (typeof data.status == "undefined") {
+		data.status = 0;
+	}
+	if (typeof data.login == "undefined") {
+		data.login = false;
+	}
+	if (typeof data.regSuc == "undefined") {
+		data.regSuc = 0;
+	}
+	if (typeof data.logSuc == "undefined") {
+		data.logSuc = 0;
+	}
 	
 	pool.getConnection(function(err, connection) {
 		if (err) {
+			data.username = "";
+			data.login = false;
 			if (err.code == 'ECONNREFUSED') {
 				console.log("refused");
 				data.status = 1;
-				sendPage(req, res, connection, data, function() {
+				updateUserData(req, res, connection, data, function() {
 					callback(data);
 					return;
 				});
 			} else {
-				throw err;
+				data.status = 1;
+				callback(data);
 			}
 		} else {
-			getUsername(connection, sessionid, data, function() {
-				sendPage(req, res, connection, data, function() {
+			if (data.login == false) {
+				getUsername(connection, sessionid, data, function() {
+					updateUserData(req, res, connection, data, function() {
+						callback(data);
+					});
+				});
+			} else { // user has just logged in or registered
+				updateUserData(req, res, connection, data, function() {
 					callback(data);
 				});
-			});
+			}
 			connection.end();
 		}
 	});
@@ -80,12 +99,10 @@ function checkPassword(req, res, data, connection, callback) {
 exports.handleLoginPost = function(req, res, data, pool, callback) {
 
 	pool.getConnection(function(err, connection) {
-		if (err && err.code == 'ECONNREFUSED') {
+		if (err) {
 			data.logSuc = 0;
 			callback();
 			return;
-		} else if (err) {
-			throw err;
 		} else {
 			checkPassword(req, res, data, connection, function() {
 				callback();
@@ -101,11 +118,9 @@ function addUser(req, res, data, connection, hash, callback) {
 	var query = connection.query('INSERT INTO users (user, password, ip, sessionid) VALUES (?, \'' + hash + '\', ?, ?)',
 		[req.body.uname, req.connection.remoteAddress, sessionid],
 		function(err, rows, fields) { 
-			if (err && err.code == 'ECONNREFUSED') {
+			if (err) {
 				data.regSuc = 0;
 				callback();
-			} else if (err) {
-				throw err;
 			} else {
 				// Add session cookies
 				res.cookie('session', sessionid, { maxAge: autoLogOffTime, httpOnly: false});
@@ -124,9 +139,11 @@ exports.handleRegisterPost = function(req, res, data, pool, callback) {
 	
 	if(req.body.pword == req.body.repword) {
 		pool.getConnection(function(err, connection) {
-		
-			if (err) throw err;
-
+			if (err) {
+				data.regSuc = 0;
+				callback();
+				return;
+			}
 			var hash = crypto.createHmac('sha1', key).update(req.body.pword).digest('hex');
 			
 			// Check that password is long enough. Short one is good for testing.
@@ -197,7 +214,7 @@ function getUsername(connection, sessionid, data, callback) {
 		});
 }
 
-function sendPage(req, res, connection, data, callback) {
+function updateUserData(req, res, connection, data, callback) {
 
 	if (data.login == true) {
 		
@@ -220,8 +237,6 @@ function sendPage(req, res, connection, data, callback) {
 			callback();
 		}
 	} else {
-		data.regSuc = 0;
-		data.logSuc = 0;
 		callback();
 	}
 

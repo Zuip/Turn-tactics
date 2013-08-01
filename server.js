@@ -25,17 +25,22 @@ var routes = require('./routes')(app, pool, sessions, APP_PATH);
 var languages = { en: require('./app/language/en.js') };		
 var language = "en";
 
-// complete POST actions and
-// modify JSON data to be passed to front-end according to POST data
+/** 
+ * completes POST actions and uses the result data in result page
+ */
 app.handlePostQueries = function(req, res){
 	var data = {status: 0};
-	if(typeof req.body.register != "undefined") {
+	if (typeof req.body.register != "undefined") {
 		sessions.handleRegisterPost(req, res, data, pool, function() {
-			app.renderPage(res, "register", data);
+			sessions.handlePage(req, res, pool, data, function(ndata) {
+				app.renderPage(res, "register", ndata);
+			});
 		});
 	} else if(typeof req.body.login != "undefined") {
 		sessions.handleLoginPost(req, res, data, pool, function() {
-			app.renderPage(res, "login", data);
+			sessions.handlePage(req, res, pool, data, function(ndata) {
+				app.renderPage(res, "login", ndata);
+			});
 		});
 	}
 }

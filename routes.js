@@ -24,7 +24,8 @@ module.exports = function(app, pool, sessions, APP_PATH) {
 		// Respond to ajax queries
 		app.get(APP_PATH+'/ajax/:id', function(req, res){
 			if (req.xhr) { // test if ajax call
-				sessions.handlePage(req, res, pool, function(data) {
+				var startdata = {};
+				sessions.handlePage(req, res, pool, startdata, function(data) {
 					//last param tells to send ajax data
 					app.sendPageContent(req, res, data, true);
 				});
@@ -33,7 +34,8 @@ module.exports = function(app, pool, sessions, APP_PATH) {
 		
 		// Serve the layout and the page
 		app.get(APP_PATH+'/', function(req, res){
-			sessions.handlePage(req, res, pool, function(data) {
+			var startdata = {};
+			sessions.handlePage(req, res, pool, startdata, function(data) {
 				app.sendPageContent(req, res, data, false);
 			});
 		});
@@ -43,7 +45,8 @@ module.exports = function(app, pool, sessions, APP_PATH) {
 			 * Some browsers try to get favicon.ico even with every ajax request */
 			if (req.params.id != "favicon.ico") {
 				// regular page
-				sessions.handlePage(req, res, pool, function(data) {
+				var startdata = {};
+				sessions.handlePage(req, res, pool, startdata, function(data) {
 					app.sendPageContent(req, res, data, false);
 				});
 			} else {
