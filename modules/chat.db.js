@@ -4,10 +4,15 @@ var GAME_CREATOR = 1;
 var GAME_INVITED = 2;
 var GAME_JOINED = 3;
 
+var dbutils = require('./dbutils');
+
 exports.doesGameExist = function(contype, resource, creator, key) {
 	// user isn't in chat, we can't use memory
-	getCon(contype, resource, function(connection) {
-		if (err) throw err;
+	dbutils.getCon(contype, resource, function(connection, err) {
+		if (err) {
+			return;
+			callback(false);
+		}
 		connection.query('SELECT 1 FROM users_challenges WHERE username = ? AND challenger = ? AND gamekey = ?'
 		[creator, creator, key],
 		function(err, rows, fields) {
@@ -22,7 +27,10 @@ exports.doesGameExist = function(contype, resource, creator, key) {
 }
 
 exports.acceptChallenge = function(contype, resource, creator, key, socket, callback) {
-	getCon(contype, resource, function(connection) {
+	dbutils.getCon(contype, resource, function(connection, err) {
+		if (err) {
+			return;
+		}
 		connection.query('UPDATE users_challenges SET status = ? WHERE username = ? AND challenger = ? AND gamekey = ?', 
 							[GAME_JOINED, socket.username, creator, key],
 							function(err, rows, fields) {
@@ -33,7 +41,11 @@ exports.acceptChallenge = function(contype, resource, creator, key, socket, call
 }
 
 exports.getChallengeData = function(contype, resource, creator, key, status, callback) {
-	getCon(contype, resource, function(connection) {
+	dbutils.getCon(contype, resource, function(connection, err) {
+		if (err) {
+			return;
+		}
+		
 		var query = connection.query('SELECT username, userlevel, status FROM users_challenges LEFT OUTER JOIN users ON users_challenges.username = users.user WHERE challenger = ? AND gamekey = ? AND username NOT IN (?)',
 		[creator, key, creator],
 		function(err, rows, fields) {
@@ -62,8 +74,10 @@ exports.getUserData = function(row) {
 }
 
 exports.doesParticipantExist = function(contype, resource, creator, key, username) {
-	getCon(contype, resource, function(connection) {
-		if (err) throw err;
+	dbutils.getCon(contype, resource, function(connection, err) {
+		if (err) {
+			return;
+		}
 		connection.query('SELECT status FROM users_challenges WHERE username = ? AND challenger = ? AND gamekey = ?'
 		[username, creator, key],
 		function(err, rows, fields) {
@@ -78,7 +92,10 @@ exports.doesParticipantExist = function(contype, resource, creator, key, usernam
 }
 
 exports.acceptInvitation = function(contype, resource, creator, key, user, callback) {
-	getCon(contype, resource, function(connection) {
+	dbutils.getCon(contype, resource, function(connection, error) {
+		if (error) {
+			return;
+		}
 		connection.query('UPDATE user SET status = ? WHERE username = ? AND challenger = ? AND gamekey = ?', 
 					[GAME_JOINED, creator, key],
 					function(err, rows, fields) {
@@ -96,7 +113,11 @@ exports.acceptInvitation = function(contype, resource, creator, key, user, callb
 
 exports.sendChallengeAccept = function(contype, resource, users, creator, key, socket, callback) {
 	// TODO: get the participants from db and send accept message to everyone who is online
-	getCon(contype, resource, function(connection) {
+	dbutils.getCon(contype, resource, function(connection, error) {
+		if (error) {
+			return;
+		}
+		
 		connection.query('SELECT username FROM users_challenges WHERE challenger = ? AND gamekey = ? WHERE username NOT IN (?, ?)', 
 		[creator, key, socket.username, creator], function(err, rows, fields) {
 			for (var i=0; i<rows.length; i++) {
@@ -108,7 +129,11 @@ exports.sendChallengeAccept = function(contype, resource, users, creator, key, s
 }
 
 exports.refuseChallenge = function(contype, resource, creator, key, socket, callback) {
-	getCon(contype, resource, function() {
+	dbutils.getCon(contype, resource, function(connection, error) {
+		if (error) {
+			return;
+		}
+		
 		connection.query('DELETE FROM users_challenges WHERE creator = ? AND gamekey = ? AND username = ?', 
 		[creator, key, socket.username], function(err, rows, fields) {
 			callback();
@@ -117,7 +142,11 @@ exports.refuseChallenge = function(contype, resource, creator, key, socket, call
 }
 
 exports.createChallenge = function(contype, resource, socket, invited, callback) {
-	getCon(contype, resource, function(connection) {
+	dbutils.getCon(contype, resource, function(connection, error) {
+		if (error) {
+			return;
+		}
+		
 		// Check that the user exists
 		connection.query('SELECT user from users WHERE user = ?', 
 		[invited],
@@ -147,7 +176,11 @@ exports.createChallenge = function(contype, resource, socket, invited, callback)
 
 exports.addInvite = function(contype, resource, creator, key, username, callback) {
 	// check that the user exists
-	getCon(contype, resource, function(connection) {
+	dbutils.getCon(contype, resource, function(connection, error) {
+		if (error) {
+			return;
+		}
+		
 		connection.query('SELECT username from users WHERE username = ?', 
 						[user], function(err, rows, fields) {
 			if (typeof rows != "undefined" && typeof rows[0] != "undefined") {
@@ -165,7 +198,10 @@ exports.addInvite = function(contype, resource, creator, key, username, callback
 }
 
 exports.closeGame = function(contype, resource, creator, key, callback) {
-	getCon(contype, resource, function(connection) {
+	dbutils.getCon(contype, resource, function(connection, error) {
+		if (error) {
+			return;
+		}
 		connection.query('DELETE FROM users_challenges WHERE challenger = ? AND gamekey = ?', 
 		[creator, key],
 		function(err, rows, fields) {
@@ -175,7 +211,10 @@ exports.closeGame = function(contype, resource, creator, key, callback) {
 }
 
 exports.cancelInvitation = function(contype, resource, socket, creator, key, username, callback) {
-	getCon(contype, resource, function(connection) {
+	dbutils.getCon(contype, resource, function(connection, error) {
+		if (error) {
+			return;
+		}
 		connection.query('DELETE FROM users_challenges WHERE username = ? AND challenger = ? AND gamekey = ?', 
 		[username, socket.username, key],
 		function(err, rows, fields) {
@@ -185,7 +224,10 @@ exports.cancelInvitation = function(contype, resource, socket, creator, key, use
 }
 
 exports.cancelParticipation = function(contype, resource, users, creator, key, username, callback) {
-	getCon(contype, resource, function(connection) {
+	dbutils.getCon(contype, resource, function(connection, error) {
+		if (error) {
+			return;
+		}
 		connection.query('SELECT username FROM users_challenges WHERE challenger = ? AND gamekey = ? WHERE username NOT IN (?, ?)', 
 		[creator, key, socket.username, creator], function(err, rows, fields) {
 			for (var i=0; i<rows.length; i++) {
@@ -199,7 +241,10 @@ exports.cancelParticipation = function(contype, resource, users, creator, key, u
 // User leaves a game they had already joined
 // delete data from db
 exports.deleteParticipationEntry = function(contype, resource, creator, key, username, callback) {
-	getCon(contype, resource, function (connection) {
+	dbutils.getCon(contype, resource, function (connection, error) {
+		if (error) {
+			return;
+		}
 		connection.query('DELETE FROM users_challenges WHERE creator = ? AND gamekey = ? AND username = ?', 
 					[creator, key, username], function(err, rows, fields) {
 			callback();
@@ -208,7 +253,10 @@ exports.deleteParticipationEntry = function(contype, resource, creator, key, use
 }
 
 exports.sendPending = function(contype, resource, socket, callback) {
-	getCon(contype, resource, function(connection) {
+	dbutils.getCon(contype, resource, function(connection, error) {
+		if (error) {
+			return;
+		}
 		connection.query('SELECT challenger, gamekey, status FROM users_challenges WHERE username = ?', 
 		[socket.username],
 		function(err, rows, fields) {
@@ -255,23 +303,3 @@ exports.sendPending = function(contype, resource, socket, callback) {
 		});
 	});
 }
-
-// function that forwards resouce as mysql connection
-// closes the connection after doing original callback
-getCon = function(contype, resource, callback) {
-	if (contype == "pool") {
-		resource.getConnection(function(err, con) {
-			if (err && err.code == 'ECONNREFUSED') {
-				// do not continue after this
-			} else if (err) {
-				throw err;
-			} else {
-				callback(con);
-			}
-		});
-	} else {
-		// it is a connection already
-		callback(resource);
-	}
-}
-exports.getCon = getCon;
