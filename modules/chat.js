@@ -6,6 +6,7 @@ var cookie = require('cookie');
 // load submodules
 var local = require('./chat.local');
 var db = require('./chat.db');
+var dbutils = require('./dbutils');
 
 /* Should challenges and participants persist in database so that
  * the challenges, invited and participants remain although users disconnect? 
@@ -257,7 +258,7 @@ module.exports = function(io, pool) {
 			if (socket.numGames < MAX_GAMES_CREATED_PER_USER
 			&& invited != socket.username) {
 				if (PERSIST_DATA) {
-					db.getCon("pool", pool, function(connection) {
+					dbutils.getCon("pool", pool, function(connection) {
 						db.createChallenge("con", connection, socket, invited, function(id) {
 							local.createChallenge(users, socket, invited, id);
 							connection.end();
@@ -279,7 +280,7 @@ module.exports = function(io, pool) {
 				if (REQUIRE_INVITED_ONLINE && isOnline) {
 					if (isOnline && user != socket.username) {
 						if (PERSIST_DATA) {
-							db.getCon("pool", pool, function(connection) {
+							dbutils.getCon("pool", pool, function(connection) {
 								db.addInvite("con", connection, socket.username, key, user, function() {
 									local.addInvite(users, channel, socket.username, key, user);
 									socket.emit("inviteStatus", user, key, true);
@@ -292,7 +293,7 @@ module.exports = function(io, pool) {
 						}
 					}
 				} else if (!REQUIRE_INVITED_ONLINE && !isOnline && PERSIST_DATA) {
-					db.getCon("pool", pool, function(connection) {
+					dbutils.getCon("pool", pool, function(connection) {
 						db.addInvite("con", connection, socket.username, key, user, function() {
 							users[socket.username].games[socket.username][key].invited.push(user);
 							socket.emit("inviteStatus", user, key, true);
@@ -304,7 +305,7 @@ module.exports = function(io, pool) {
 		});
 		
 		socket.on('acceptChallenge', function(creator, key) {
-			getCon("pool", pool, function(connection) {
+			dbutils.getCon("pool", pool, function(connection) {
 				doesGameExist("con", connection, creator, key, function(success) {
 					// Check that the challenge has actually been sent in order to prevent faking accept
 					if (success && getGameStatus(socket.games, creator, key) == GAME_INVITED) {
@@ -320,7 +321,7 @@ module.exports = function(io, pool) {
 		});
 		
 		socket.on('refuseChallenge', function(creator, key) {
-			db.getCon("pool", pool, function(connection) {
+			dbutils.getCon("pool", pool, function(connection) {
 				doesGameExist("con", connection, creator, key, function(success) {
 					if (success == true && getGameStatus(socket.games, creator, key) == GAME_INVITED) {
 						refuseChallenge("con", connection, socket, creator, key);
@@ -333,7 +334,7 @@ module.exports = function(io, pool) {
 		// Game creator cancelled invitation for one user
 		socket.on('cancelInvitation', function(invited, key) {
 			var creator = socket.username;
-			db.getCon("pool", pool, function(connection) {
+			dbutils.getCon("pool", pool, function(connection) {
 				doesGameExist("con", connection, creator, key, function(gameExists) {
 					if (gameExists) {
 						doesParticipantExist("con", connection, socket, creator, key, invited, function(success, status) {
@@ -355,7 +356,7 @@ module.exports = function(io, pool) {
 		
 		// One of the participants cancelled
 		socket.on('cancelChallenge', function(creator, key) {
-			db.getCon("pool", pool, function(connection) {
+			dbutils.getCon("pool", pool, function(connection) {
 				doesGameExist("con", connection, creator, key, function(gameExists) {
 					if (gameExists) {
 						if (getGameStatus(socket.games, creator, key) == GAME_JOINED) {
@@ -372,7 +373,7 @@ module.exports = function(io, pool) {
 			if (typeof socket.games[socket.username] != "undefined" 
 			&& typeof socket.games[socket.username][key] != "undefined") {
 				if (PERSIST_DATA) {
-					getCon("pool", pool, function(connection) {
+					dbutils.getCon("pool", pool, function(connection) {
 						closeGame("con", connection, socket.username, key, true);
 						connection.end();
 					});
@@ -424,7 +425,7 @@ module.exports = function(io, pool) {
 		users[socket.username] = socket;
 		// on beginning of connection, send the pending invites/challenges if persist mode is enabled
 		if (PERSIST_DATA) {
-			db.getCon("pool", pool, function(connection) {
+			dbutils.getCon("pool", pool, function(connection) {
 				db.sendPending("con", connection, socket, function() {
 					connection.end();
 				});
