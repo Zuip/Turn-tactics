@@ -1,4 +1,4 @@
-var PORT = 81;
+var PORT = 82;
 var express		= require('express');
 var querystring	= require('querystring');
 var sessions	= require('./modules/sessions');
@@ -19,7 +19,7 @@ app.use(express.cookieParser());
 
 // http url path
 var APP_PATH = "";
-var routes = require('./routes')(app, pool, sessions, APP_PATH);
+var routes = require('./routes')(express, app, pool, sessions, APP_PATH);
 
 // load languages
 var languages = { en: require('./app/language/en.js') };		
@@ -105,22 +105,6 @@ app.sendPageContent = function(req, res, data, ajaxdataonly) {
 app.sendPage = function(req, res, data) {
 	var page = app.getPage(req.params);
 	app.renderPage(res, page, data);
-}
-
-// Serves files with correct mime types
-// Express.js static did not set mime types correctly
-app.serveFiles = function(req, res, directory) {
-	fs.readFile(directory + "/" + req.params.file, function(err, data) {
-		if(err) {
-			res.status(404);
-			res.render('views/404', { url: req.url });
-		} else {
-			// set the content type based on the file
-			res.contentType(req.params.file);
-			res.send(data);
-		}   
-		res.end();
-	}); 
 }
 
 // Http

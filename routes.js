@@ -1,6 +1,17 @@
-module.exports = function(app, pool, sessions, APP_PATH) {
+module.exports = function(express, app, pool, sessions, APP_PATH) {
 	
 	this.configure = function() {
+	
+		// Temporary, until media is located differently
+		app.use("/app", express.static(__dirname + '/app'));
+		
+		app.use(APP_PATH + "/app/js", express.static(__dirname + APP_PATH + '/app/js'));
+		app.use(APP_PATH + "/app/templates", express.static(__dirname + APP_PATH + '/app/templates'));
+		app.use(APP_PATH + "/app/language", express.static(__dirname + APP_PATH + '/app/language'));
+		app.use(APP_PATH + "/app/controllers", express.static(__dirname + APP_PATH + '/app/controllers'));
+		app.use(APP_PATH + "/views", express.static(__dirname + APP_PATH + '/views'));
+		app.use(APP_PATH + "/images", express.static(__dirname + APP_PATH + '/images'));
+		
 		// Handle post requests
 		app.post(APP_PATH+'/', function(req, res) {
 			app.handlePostQueries(req, res);
@@ -14,11 +25,6 @@ module.exports = function(app, pool, sessions, APP_PATH) {
 		// Handle logins
 		app.post(APP_PATH+'/login', function(req, res) {
 			app.handlePostQueries(req, res);
-		});
-		
-		// Receive ajax post requests
-		app.post(APP_PATH+'/ajax', function(req, res) {
-			//todo
 		});
 		
 		// Respond to ajax queries
@@ -52,33 +58,6 @@ module.exports = function(app, pool, sessions, APP_PATH) {
 			} else {
 				next();
 			}
-		});
-		// serve images
-		app.get(APP_PATH+"/images/:file", function(req, res) {
-			app.serveFiles(req, res, "images");
-		});
-		// style.css
-		app.get(APP_PATH+"/app/:file", function(req, res) {
-			app.serveFiles(req, res, "app");
-		});
-		// serve front-end js directly
-		app.get(APP_PATH+"/app/js/:file", function(req, res) {
-			app.serveFiles(req, res, "app/js");
-		});
-		app.get(APP_PATH+"/app/templates/:file", function(req, res) {
-			app.serveFiles(req, res, "app/templates");
-		});
-		// serve controllers directly
-		app.get(APP_PATH+"/app/controllers/:file", function(req, res) {
-			app.serveFiles(req, res, "app/controllers");
-		});
-		// serve language files directly
-		app.get(APP_PATH+"/app/language/:file", function(req, res) {
-			app.serveFiles(req, res, "app/language");
-		});
-		// serve view directly
-		app.get(APP_PATH+"/app/views/:file", function(req, res) {
-			app.serveFiles(req, res, "app/views");
 		});
 		
 		//None of the other rules applied
