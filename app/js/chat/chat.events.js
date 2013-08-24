@@ -1,9 +1,11 @@
 /**
  * Sanep 2013
  */
-
+ 
+var Chat = Chat || {};
 Chat.Events = function(chat) {
 	"use strict";
+	
 	this.init = function() {
 		var self = this;
 		chat.createChatUI();

@@ -1,9 +1,11 @@
 /**
  * Sanep 2013
  */
-
+ 
+var Chat = Chat || {};
 Chat.Games = function(chat) {
 	"use strict";
+	
 	// the challenges received from other users
 	this.challenges = [];
 	// other users that the user has challenged

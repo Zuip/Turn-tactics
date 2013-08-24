@@ -1,9 +1,10 @@
 /**
  * Sanep 2013
  */
-
+ 
 Chat = function() {
 	"use strict";
+	
 	this.Events = new Chat.Events(this);
 	this.ContextMenus = new Chat.ContextMenus(this);
 	this.Games = new Chat.Games(this);

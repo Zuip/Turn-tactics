@@ -1,9 +1,11 @@
 /**
  * Sanep 2013
  */
-
+ 
+var Chat = Chat || {};
 Chat.Messages = function(chat) {
 	"use strict";
+	
 	// messages in each channel
 	this.messages = [];
 	this.messages[""] = new Array();

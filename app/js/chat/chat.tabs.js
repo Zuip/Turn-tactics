@@ -2,8 +2,10 @@
  * Sanep 2013
  */
 
+var Chat = Chat || {};
 Chat.Tabs = function(chat) {
 	"use strict";
+	
 	this.tabs = null,
 	this.tabList = [],
 	this.currentTab = { type: 0 };

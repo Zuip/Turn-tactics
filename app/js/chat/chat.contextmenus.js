@@ -2,8 +2,10 @@
  * Sanep 2013
  */
 
+var Chat = Chat || {};
 Chat.ContextMenus = function(chat) {
 	"use strict";
+	
 	this.createContextMenus = function() {
 		this.createUserMenu();
 		this.createChallengeResponseMenu();
