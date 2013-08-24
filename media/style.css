@@ -1,7 +1,3 @@
-body {
-	background: url(../images/bg.png);
-}
-
 #border {
 	width: 70%;
 	margin: 0 auto;
@@ -17,9 +13,7 @@ body {
 	margin-top: 5px;
 	padding: 5px;
 	border-radius: 10px;
-	background: url(images/logo2.png) #00A2E8;
-	background-repeat: no-repeat;
-	background-position:0 40px; 
+	background: #00A2E8;
 	height: 150px;
 	color: #FFF;
 }
@@ -150,7 +144,7 @@ h3 {
 	margin: 0;
 }
 #status li {
-	background: url('../images/exclamation.png') no-repeat top left;
+	background: url('images/exclamation.png') no-repeat top left;
 	padding-left: 24px;
 	margin: 0;
 	list-style: none;

@@ -17,7 +17,7 @@ function Picture(name, type, pictureAddress) {
 		++game.pictures.amountOfPictures;
 		this.name = name;
 		this.image = new Image();
-		this.image.src = APP_PATH + pictureAddress;
+		this.image.src = APP_PATH + '/media/images/' + pictureAddress;
 		this.image.onload = function(){ game.loader.haveLoaded(); }
 	}
 }
@@ -46,37 +46,37 @@ function Pictures() {
 	
 	this.loadPictures = function() {
 	
-		this.pictures[0] = new Picture('sand1', 'land', '/images/sand1.png');
-		this.pictures[1] = new Picture('sand2', 'land', '/images/sand2.png');
-		this.pictures[2] = new Picture('grass1', 'land', '/images/grass1.png');
-		this.pictures[3] = new Picture('grass2', 'land', '/images/grass2.png');
-		this.pictures[4] = new Picture('grass3', 'land', '/images/grass3.png');
-		this.pictures[5] = new Picture('grass4', 'land', '/images/grass4.png');
-		this.pictures[6] = new Picture('grass5', 'land', '/images/grass5.png');
-		this.pictures[7] = new Picture('water', 'water', '/images/water.png');
-		this.pictures[8] = new Picture('road_straight', 'object', '/images/road_straight.png');
-		this.pictures[9] = new Picture('road_intersection1', 'object', '/images/road_intersection1.png');
-		this.pictures[10] = new Picture('road_intersection2', 'object', '/images/road_intersection2.png');
-		this.pictures[11] = new Picture('road_curve', 'object', '/images/road_curve.png');
-		this.pictures[12] = new Picture('road_end', 'object', '/images/road_end.png');
-		this.pictures[13] = new Picture('building1', 'object', '/images/building1.gif');
-		this.pictures[14] = new Picture('building2', 'object', '/images/building2.png');
-		this.pictures[15] = new Picture('tree1', 'object', '/images/tree1.png');
-		this.pictures[16] = new Picture('tree2', 'object', '/images/tree2.png');
-		this.pictures[17] = new Picture('tree3', 'object', '/images/tree3.png');
-		this.pictures[18] = new Picture('tree4', 'object', '/images/tree4.png');
-		this.pictures[19] = new Picture('tree5', 'object', '/images/tree5.png');
-		this.pictures[20] = new Picture('tree6', 'object', '/images/tree6.png');
-		this.pictures[21] = new Picture('mountain1', 'object', '/images/mountain1.png');
-		this.pictures[22] = new Picture('mountain2', 'object', '/images/mountain2.png');
-		this.pictures[23] = new Picture('mountain3', 'object', '/images/mountain3.png');
-		this.pictures[24] = new Picture('mountain4', 'object', '/images/mountain4.png');
-		this.pictures[25] = new Picture('cliff1', 'object', '/images/cliff1.png');
-		this.pictures[26] = new Picture('cliff2', 'object', '/images/cliff2.png');
-		this.pictures[27] = new Picture('cactus1', 'object', '/images/cactus1.png');
-		this.pictures[28] = new Picture('cactus2', 'object', '/images/cactus2.png');
-		this.pictures[29] = new Picture('selector', 'cursor', '/images/selector.png');
-		this.pictures[30] = new Picture('deletor', 'cursor', '/images/cross.png');
+		this.pictures[0] = new Picture('sand1', 'land', 'sand1.png');
+		this.pictures[1] = new Picture('sand2', 'land', 'sand2.png');
+		this.pictures[2] = new Picture('grass1', 'land', 'grass1.png');
+		this.pictures[3] = new Picture('grass2', 'land', 'grass2.png');
+		this.pictures[4] = new Picture('grass3', 'land', 'grass3.png');
+		this.pictures[5] = new Picture('grass4', 'land', 'grass4.png');
+		this.pictures[6] = new Picture('grass5', 'land', 'grass5.png');
+		this.pictures[7] = new Picture('water', 'water', 'water.png');
+		this.pictures[8] = new Picture('road_straight', 'object', 'road_straight.png');
+		this.pictures[9] = new Picture('road_intersection1', 'object', 'road_intersection1.png');
+		this.pictures[10] = new Picture('road_intersection2', 'object', 'road_intersection2.png');
+		this.pictures[11] = new Picture('road_curve', 'object', 'road_curve.png');
+		this.pictures[12] = new Picture('road_end', 'object', 'road_end.png');
+		this.pictures[13] = new Picture('building1', 'object', 'building1.gif');
+		this.pictures[14] = new Picture('building2', 'object', 'building2.png');
+		this.pictures[15] = new Picture('tree1', 'object', 'tree1.png');
+		this.pictures[16] = new Picture('tree2', 'object', 'tree2.png');
+		this.pictures[17] = new Picture('tree3', 'object', 'tree3.png');
+		this.pictures[18] = new Picture('tree4', 'object', 'tree4.png');
+		this.pictures[19] = new Picture('tree5', 'object', 'tree5.png');
+		this.pictures[20] = new Picture('tree6', 'object', 'tree6.png');
+		this.pictures[21] = new Picture('mountain1', 'object', 'mountain1.png');
+		this.pictures[22] = new Picture('mountain2', 'object', 'mountain2.png');
+		this.pictures[23] = new Picture('mountain3', 'object', 'mountain3.png');
+		this.pictures[24] = new Picture('mountain4', 'object', 'mountain4.png');
+		this.pictures[25] = new Picture('cliff1', 'object', 'cliff1.png');
+		this.pictures[26] = new Picture('cliff2', 'object', 'cliff2.png');
+		this.pictures[27] = new Picture('cactus1', 'object', 'cactus1.png');
+		this.pictures[28] = new Picture('cactus2', 'object', 'cactus2.png');
+		this.pictures[29] = new Picture('selector', 'cursor', 'selector.png');
+		this.pictures[30] = new Picture('deletor', 'cursor', 'cross.png');
 		
 		for(var i = 0; i < this.pictures.length; ++i) {
 			this.pictures[i].init();

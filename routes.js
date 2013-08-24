@@ -2,15 +2,12 @@ module.exports = function(express, app, pool, sessions, APP_PATH) {
 	
 	this.configure = function() {
 	
-		// Temporary, until media is located differently
-		app.use("/app", express.static(__dirname + '/app'));
-		
 		app.use(APP_PATH + "/app/js", express.static(__dirname + APP_PATH + '/app/js'));
 		app.use(APP_PATH + "/app/templates", express.static(__dirname + APP_PATH + '/app/templates'));
 		app.use(APP_PATH + "/app/language", express.static(__dirname + APP_PATH + '/app/language'));
 		app.use(APP_PATH + "/app/controllers", express.static(__dirname + APP_PATH + '/app/controllers'));
 		app.use(APP_PATH + "/views", express.static(__dirname + APP_PATH + '/views'));
-		app.use(APP_PATH + "/images", express.static(__dirname + APP_PATH + '/images'));
+		app.use(APP_PATH + "/media", express.static(__dirname + APP_PATH + '/media'));
 		
 		// Handle post requests
 		app.post(APP_PATH+'/', function(req, res) {
