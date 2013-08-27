@@ -1,6 +1,5 @@
 /* Sanep 2013 */
 
-var users = {};
 var cookie = require('cookie');
 
 // load submodules
@@ -8,14 +7,26 @@ var local = require('./chat.local');
 var db = require('./chat.db');
 var dbutils = require('./dbutils');
 
+// User related data
+var users = {};
+// Public game data
+var games = {};
+
 /* Should challenges and participants persist in database so that
  * the challenges, invited and participants remain although users disconnect? 
  * This doesn't have effect on ready games db entries, which are always created */
-var PERSIST_DATA = false;
+var PERSIST_DATA = true;
 // Should the user be online when they are invited to a game?
 var REQUIRE_INVITED_ONLINE = true;
 var MAX_USERS_PER_GAME = 4;
 var MAX_GAMES_CREATED_PER_USER = 2;
+
+// Allow channel-specific public challenges?
+var PUBLIC_CHALLENGES = true;
+/* Close public games when the game creator leaves?
+ * If disabled and persist mode enabled, 
+ * games will automatically become private games */
+var AUTO_CLOSE_PUBLIC_GAMES = true;
 
 // Private channel prefix
 var PRIVATE_CHANNEL = true;
@@ -27,18 +38,32 @@ var GAME_CREATOR = 1;
 var GAME_INVITED = 2;
 var GAME_JOINED = 3;
 
-// gets all challenge data
+/**
+ * Gets all challenge data
+ */
 getChallengeData = function(contype, resource, creator, key, callback) {
 	if (typeof users[creator] != "undefined") {
 		var data = local.getChallengeData(users, creator, key);
 		callback(data);
 	} else if (PERSIST_DATA) {
-		db.getChallengeData(contype, resource, creator, key, function(data) {
+		// here the status doesn't need to be forwarded
+		var dummystatus = 0;
+		db.getChallengeData(contype, resource, creator, key, dummystatus, function(creator, key, status, data) {
 			callback(data);
 		});
 	}
 }
 
+/**
+ * Returns list of public games in channel
+ */
+getPubGameList = function(channel) {
+	return games[channel];
+}
+
+/**
+ * Checks if user is on given channel
+ */
 isUserOnChannel = function(socket, channel) {
 	if (typeof socket.channels[channel] != "undefined"
 		&& socket.channels[channel] == true) {
@@ -50,17 +75,17 @@ isUserOnChannel = function(socket, channel) {
 doesGameExist = function(contype, resource, creator, key, callback) {
 	if (typeof users[creator] != "undefined") {
 		var result = local.doesGameExist(users, creator, key);
-		callback(result);
+		callback(result.success, result.isPublic, result.numPlayers);
 	} else if (PERSIST_DATA) {
-		db.doesGameExist(contype, resource, creator, key, function(result) {
-			callback(result);
+		db.doesGameExist(contype, resource, creator, key, function(result, numPlayers) {
+			callback(result, false, numPlayers);
 		});
 	} else {
 		callback(false);
 	}
 }
 
-doesParticipantExist = function(contype, resource, socket, creator, key, username, callback) {
+doesParticipantExist = function(contype, resource, creator, key, username, callback) {
 	if (typeof users[username] != "undefined") {
 		local.doesParticipantExist(users, creator, key, username, function(isValid, status) {
 			callback(isValid, status);
@@ -94,24 +119,149 @@ sendChallengeData = function(contype, resource, creator, key, socket) {
 	});
 }
 
-// Closes games and informs all participants and invited
-closeGame = function(contype, resource, creator, key, confirm) {
+// Closes game and informs all participants and invited
+closeGame = function(contype, resource, creator, key, confirm, callback) {
 	if (PERSIST_DATA) {
 		db.closeGame(contype, resource, creator, key, function() {
-			local.closeGame(users, creator, key, confirm);
+			local.closeGame(users, games, creator, key, confirm);
+			callback();
 		});
 	} else {
-		local.closeGame(users, creator, key, confirm);
+		local.closeGame(users, games, creator, key, confirm);
+		callback();
 	}
 }
 
-// Removes an user from a game that they already joined
-cancelParticipation = function(contype, resource, creator, key, username, confirmation) {
+// close all created games
+closeGames = function(contype, resource, username, confirm, callback) {
+	if (typeof socket.games[username] != "undefined") {
+		var numkeys = Object.keys(socket.games[username]).length;
+		var counter = 0;
+		
+		for (game in socket.games[username]) {
+			closeGame(contype, resource, username, game, confirm, function() {
+				++counter;
+				if (counter == numkeys) {
+					callback();
+				}
+			});
+		}
+	} else {
+		callback();
+	}
+}
+
+/**
+ * Handles all user games when user closes chat (persist mode enabled)
+ */
+ handleClosedChat = function(contype, resource, socket, callback) {
+ 
+	if (typeof socket.games[socket.username] != "undefined") {
+		var numkeys = Object.keys(socket.games[socket.username]).length;
+		var counter = 0;
+	 
+		//TODO: send challengeinfo update?
+		for (key in socket.games[socket.username]) {
+			if (socket.games[socket.username][key].isPublic) {
+				if (AUTO_CLOSE_PUBLIC_GAMES) {
+					closeGame(contype, resource, socket.username, key, false, function() {
+						++counter;
+						if (counter == numkeys) {
+							callback();
+						}
+					});
+				} else {
+					local.setGameType(socket.games[socket.username][key].channel, 
+					socket.username, key, false);
+					++counter;
+					if (counter == numkeys) {
+						callback();
+					}
+				}
+			} else {
+				++counter;
+				if (counter == numkeys) {
+					callback();
+				}
+			}
+		}
+	} else {
+		callback();
+	}
+ }
+
+ handleGameDisconnect = function(contype, resource, socket, callback) {
+	if (!PERSIST_DATA) {
+		closeGames(null, null, socket.username, false, function() {
+			delete socket.games[socket.username];
+			sendCancelMessages(socket);
+			callback();
+		});
+	} else {
+		handleClosedChat(contype, resource, socket, function() {
+			callback();
+		});
+	}
+ }
+ 
+/**
+ * send cancel message to all games joined
+ */
+sendCancelMessages = function(socket) {
+	var numkeys = 0;
+	var counter = 0;
+	
+	// Calculate number of keys
+	for (username in socket.games) {
+		if (username != socket.username) {
+			numkeys = numkeys + Object.keys(socket.games[username]).length;
+		}
+	}
+	
+	for (username in socket.games) {
+		if (username != socket.username) {
+			numkeys = numkeys + Object.keys(socket.games[username]).length;
+			for (key in socket.games[username]) {
+				if (getGameStatus(socket.games, username, key) == GAME_JOINED) {
+					cancelParticipation(username, key, socket.username, true, function() {
+						++counter;
+						if (counter == numkeys) {
+							callback();
+						}
+					});
+				} else if (getGameStatus(socket.games, username, key) == GAME_INVITED) {
+					// Remove user from invited list
+					var index = users[username].games[username][key].invited.indexOf(socket.username);
+					users[username].games[username][key].invited.splice(index, 1);
+					// Inform the game creator
+					users[username].emit("challengeRefused", socket.username, key);
+					++counter;
+					if (counter == numkeys) {
+						callback();
+					}
+				}
+			}
+		}
+	}
+}
+
+/**
+ * Removes an user from a game that they already joined
+ */
+cancelParticipation = function(contype, resource, creator, key, username, confirmation, callback) {
 	if (typeof users[creator] != "undefined") {
-		local.cancelParticipation(users, creator, key, username, confirmation);
-	} else if (PERSIST_DATA) {
-		db.cancelParticipation(contype, resource, users, creator, key, username, function() {
+		if (PERSIST_DATA) {
+			db.cancelParticipation(contype, resource, users, creator, key, username, function() {
+				local.cancelParticipation(users, creator, key, username, confirmation);
+				callback();
+			});
+		} else {
 			local.cancelParticipation(users, creator, key, username, confirmation);
+			callback();
+		}
+	} else if (PERSIST_DATA) { // creator not online
+		db.cancelParticipation(contype, resource, users, creator, key, username, function() {
+			callback();
 		});
 	}
 }
@@ -120,11 +270,11 @@ refuseChallenge = function(contype, resource, socket, creator, key) {
 	if (PERSIST_DATA) {
 		db.refuseChallenge(contype, resource, creator, key, socket, function() {
 			if (typeof users[creator] != "undefined") {
-				local.refuseChallenge(creator, key, socket);
+				local.refuseChallenge(users, creator, key, socket);
 			}
 		});
 	} else {
-		local.refuseChallenge(creator, key, socket);
+		local.refuseChallenge(users, creator, key, socket);
 	}
 }
 
@@ -150,7 +300,9 @@ getGameStatus = function(games, user, key) {
 	return 0;
 }
 
-// Creates unique name for game room to avoid name collisions
+/**
+ * Creates unique name for game room to avoid name collisions
+ */
 getGameRoomName = function(creator, key) {
 	return PRIVATE_CHANNEL_SEPARATOR + creator + PRIVATE_CHANNEL_SEPARATOR + key;
 }
@@ -206,7 +358,7 @@ module.exports = function(io, pool) {
 			&& !isUserOnChannel(socket, channel)) { // there could be other channels too to check
 				socket.broadcast.to(channel).emit('userJoin', channel, local.getUser(socket));
 				socket.join(channel);
-				socket.emit('channelJoinSuccessful', channel);
+				socket.emit('channelJoinSuccessful', channel, getPubGameList(channel));
 				socket.emit('userList', channel, local.getUserList(chat, channel));
 				socket.channels[channel] = true;
 			} else {
@@ -248,26 +400,35 @@ module.exports = function(io, pool) {
 			}
 		});
 		
-		socket.on('createChallenge', function(channel, invited) {
-			//Todo: check that the user is actually on the channel the challenge was sent from
-			// also check if the challenge has already been sent
+		socket.on('createChallenge', function(channel, isPublic, invited) {
+			
+			var gameAllowed = true;
+			if (typeof isPublic == "boolean" && isPublic) {
+				if (isPublic && !PUBLIC_CHALLENGES) {
+					gameAllowed = false;
+				} else if (isPublic && !isUserOnChannel(socket, channel)) {
+					gameAllowed = false;
+				}
+			} else if (invited == socket.username) {
+				gameAllowed = false;
+			}
 			
 			if (typeof (socket.games[socket.username]) == "undefined") {
 				socket.games[socket.username] = [];
 			}
-			if (socket.numGames < MAX_GAMES_CREATED_PER_USER
-			&& invited != socket.username) {
-				if (PERSIST_DATA) {
+			if (gameAllowed 
+			&& socket.numGames < MAX_GAMES_CREATED_PER_USER) {
+				if (PERSIST_DATA && !isPublic) {
 					dbutils.getCon("pool", pool, function(connection) {
 						db.createChallenge("con", connection, socket, invited, function(id) {
-							local.createChallenge(users, socket, invited, id);
+							local.createChallenge(users, games, socket, invited, id, channel, isPublic);
 							connection.end();
 						});
 					});
-				} else if (typeof users[invited] != "undefined") {
-					// if the challenge is not saved to db, the user has to be online
+				} else {
+					// if the challenge is not saved to db, the user needs to be online
 					var id = socket.games[socket.username].length;
-					local.createChallenge(users, socket, invited, id, channel);
+					local.createChallenge(users, games, socket, invited, id, channel, isPublic);
 				}
 			}
 		});
@@ -306,9 +467,18 @@ module.exports = function(io, pool) {
 		
 		socket.on('acceptChallenge', function(creator, key) {
 			dbutils.getCon("pool", pool, function(connection) {
-				doesGameExist("con", connection, creator, key, function(success) {
-					// Check that the challenge has actually been sent in order to prevent faking accept
-					if (success && getGameStatus(socket.games, creator, key) == GAME_INVITED) {
+				doesGameExist("con", connection, creator, key, function(success, isPublic, numPlayers) {
+					var allowedToJoin = false;
+					console.log("NUMPLAYERS: " + numPlayers);
+					if (numPlayers < MAX_USERS_PER_GAME) {
+						if (isPublic) {
+							allowedToJoin = true;
+						} else if (getGameStatus(socket.games, creator, key) == GAME_INVITED) {
+							allowedToJoin = true;
+						}
+					}
+					
+					if (success && allowedToJoin) {
 						acceptChallenge("con", connection, creator, key, socket, function() {
 							sendChallengeAccept("con", connection, creator, key, socket, function() {
 								sendChallengeData("con", connection, creator, key, socket);
@@ -337,7 +507,7 @@ module.exports = function(io, pool) {
 			dbutils.getCon("pool", pool, function(connection) {
 				doesGameExist("con", connection, creator, key, function(gameExists) {
 					if (gameExists) {
-						doesParticipantExist("con", connection, socket, creator, key, invited, function(success, status) {
+						doesParticipantExist("con", connection, creator, key, invited, function(success, status) {
 							if (success) {
 								if (PERSIST_DATA) {
 									db.cancelInvitation("con", connection, socket, creator, key, invited, function() {
@@ -359,10 +529,11 @@ module.exports = function(io, pool) {
 			dbutils.getCon("pool", pool, function(connection) {
 				doesGameExist("con", connection, creator, key, function(gameExists) {
 					if (gameExists) {
-						if (getGameStatus(socket.games, creator, key) == GAME_JOINED) {
-							cancelParticipation("con", connection, creator, key, socket.username, true);
-							connection.end();
-						}
+						doesParticipantExist("con", connection, creator, key, socket.username, function() {
+							cancelParticipation("con", connection, creator, key, socket.username, true, function() {
+								connection.end();
+							});
+						});
 					}
 				});
 			});
@@ -374,8 +545,9 @@ module.exports = function(io, pool) {
 			&& typeof socket.games[socket.username][key] != "undefined") {
 				if (PERSIST_DATA) {
 					dbutils.getCon("pool", pool, function(connection) {
-						closeGame("con", connection, socket.username, key, true);
-						connection.end();
+						closeGame("con", connection, socket.username, key, true, function() {
+							connection.end();
+						});
 					});
 				} else {
 					closeGame(null, null, socket.username, key, true);
@@ -384,40 +556,18 @@ module.exports = function(io, pool) {
 		});
 		
 		socket.on('disconnect', function() {
-			if (!PERSIST_DATA) {
-				// close all created games
-				for (game in socket.games[socket.username]) {
-					closeGame(null, null, socket.username, game, false);
-				}
-			
-				delete socket.games[socket.username];
-				// send cancel message to all games joined
-				for (username in socket.games) {
-					if (username != socket.username) {
-						for (key in socket.games[username]) {
-							if (getGameStatus(socket.games, username, key) == GAME_JOINED) {
-								cancelParticipation(username, key, socket.username, true);
-							} else if (getGameStatus(socket.games, username, key) == GAME_INVITED) {
-								// Remove user from invited list
-								var index = users[username].games[username][key].invited.indexOf(socket.username);
-								users[username].games[username][key].invited.splice(index, 1);
-								// Inform the game creator
-								users[username].emit("challengeRefused", socket.username, key);
-							}
-						}
+			dbutils.getCon("pool", pool, function(connection) {
+				handleGameDisconnect("con", connection, socket, function() {
+					delete socket.games;
+					// send disconnect message to all channels
+					for (channel in socket.channels) {
+						socket.leave(channel);
+						socket.broadcast.to(channel).emit('userDisconnect', channel, local.getUser(socket));
 					}
-				}
-			} else {
-				//TODO: send challengeinfo update?
-			}
-			delete socket.games;
-			
-			// send disconnect message to all channels
-			for (channel in socket.channels) {
-				socket.leave(channel);
-				socket.broadcast.to(channel).emit('userDisconnect', channel, local.getUser(socket));
-			}
-			delete users[socket.username];
+					delete users[socket.username];
+					connection.end();
+				});
+			});
 		});
 		
 		/* initialize this variable here to minimize the chances of scenario where 

@@ -15,6 +15,9 @@ Chat.Events = function(chat) {
 			chat.socket = io.connect("http://"+window.location.host+"/chat");
 			chat.socket.on('connect', function() {
 				chat.connected = true;
+				chat.Tabs.tabs.show();
+				chat.userList.show();
+				chat.chatInput.show();
 				self.initChatEvents();
 				chat.chatInputText.attr("disabled", false);
 				chat.Messages.messages[""] = new Array();
@@ -168,7 +171,8 @@ Chat.Events = function(chat) {
 		
 		// Creator of the challenge closed the challenge
 		chat.socket.on('challengeClosed', function(user, key) {
-			if (typeof chat.Games.getGame(user, key).window != "undefined") {
+			if (typeof chat.Games.getGame(user, key) != "undefined"
+			&& typeof chat.Games.getGame(user, key).window != "undefined") {
 				chat.Games.getGame(user, key).window.dialog("close");
 			}
 			if (chat.GAMETABS == true) {
@@ -257,6 +261,24 @@ Chat.Events = function(chat) {
 			chat.Tabs.updateCurrentTab();
 		});
 		
+		// new public game on a channel
+		chat.socket.on('newPublicChallenge', function(channel, creator, key) {
+			chat.Games.addPublicGame(channel, creator, key);
+			if (chat.Tabs.currentTab.type == chat.Tabs.TAB_CHANNEL
+			&& chat.Tabs.currentTab.channel == channel) {
+				chat.Tabs.updatePublicGameList(channel);
+			}
+		});
+		
+		// public game removed or hidden
+		chat.socket.on('publicChallengeClosed', function(channel, creator, key) {
+			chat.Games.deletePublicGame(channel, creator, key);
+			if (chat.Tabs.currentTab.type == chat.Tabs.TAB_CHANNEL
+			&& chat.Tabs.currentTab.channel == channel) {
+				chat.Tabs.updatePublicGameList(channel);
+			}
+		});
+
 		// current participant receives data about the challenge
 		chat.socket.on('challengeData', function(user, key, data) {
 			chat.Games.createEntryIfndef("games", user);
@@ -285,10 +307,11 @@ Chat.Events = function(chat) {
 			}
 		});
 		
-		chat.socket.on('channelJoinSuccessful', function(channel) {
+		chat.socket.on('channelJoinSuccessful', function(channel, publicGameList) {
 			chat.channels.push(channel);
 			chat.Messages.createMessagesEntry(channel);
 			chat.createUserEntry(channel);
+			chat.Games.setPubGameList(channel, publicGameList);
 			chat.Tabs.createChannelTab(channel, false);
 			chat.Tabs.changeToChannelTab(channel, false);
 		});

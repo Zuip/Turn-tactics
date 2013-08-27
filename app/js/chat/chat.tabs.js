@@ -47,6 +47,8 @@ Chat.Tabs = function(chat) {
 		if (this.currentTab.type != this.TAB_CHANNEL 
 		|| this.currentTab.channel != channel || init == true) {
 			this.removeTabHighlight();
+			this.updatePublicGameList(channel);
+			
 			this.updateMessageList(channel);
 			this.updateUserList(channel);
 			$("#chat-"+channel).addClass("chatTabSelected");
@@ -58,6 +60,8 @@ Chat.Tabs = function(chat) {
 	this.changeToGameTab = function(creator, key) {
 		this.removeTabHighlight();
 		$("#game-"+creator+'-'+key).addClass("chatTabSelected");
+		$('#gameWindow').empty();
+		$('#gameWindow').hide();
 		this.updateGameUserList(creator, key);
 		this.updateGameMessageList(chat.msgWindow, creator, key);
 		this.currentTab.type = chat.TAB_GAME;
@@ -199,11 +203,39 @@ Chat.Tabs = function(chat) {
 		return msg;
 	};
 	
+	this.updatePublicGameList = function(channel) {
+		$('#gameWindow').empty();
+		var gameList = chat.Games.getPubGameList(channel);
+		$('<div>', { text: "Public games", class: "chat_caption"}).appendTo(chat.gameWindow);
+		var gameFound = false;
+		var games = [];
+		for (var creator in gameList) {
+			for (var key in gameList[creator]) {
+				var game = this.createPublicGameDiv(channel, creator, key);
+				game.data("challenger", creator);
+				game.data("key", key);
+				games.push(game);
+				gameFound = true;
+			}
+		}
+		
+		if (gameFound) {
+			for (var i=0; i<games.length; ++i) {
+				games[i].appendTo(chat.gameWindow);
+			}
+		} else {
+			$('<div>', { text: "No public games"}).appendTo(chat.gameWindow);
+		}
+		$('#gameWindow').show();
+		
+	}
+	
 	this.updateMessageList = function(channel) {
 	
 		var onBottom = this.isScrollOnBottom(chat.msgWindow);
 		
 		$('#msgWindow').empty();
+		$('<div>', { text: "Messages", class: "chat_caption"}).appendTo(chat.msgWindow);
 		if (typeof chat.Messages.messages[channel] != 'undefined') {
 			for (var i=0; i<chat.Messages.messages[channel].length; ++i) {
 				var time = "["+chat.Messages.messages[channel][i].time.getHours() + ":"
@@ -235,6 +267,7 @@ Chat.Tabs = function(chat) {
 		var onBottom = this.isScrollOnBottom(chat.msgWindow);
 	
 		$(target).empty();
+		$('<div>', { text: "Messages", class: "chat_caption"}).appendTo(target);
 		if (chat.Games.isGameDefined(creator, key)) {
 			var messages = chat.Games.getGame(creator, key).chatMessages;
 			
@@ -246,6 +279,13 @@ Chat.Tabs = function(chat) {
 		if (onBottom == true) {
 			this.scrollToBottom(chat.msgWindow);
 		}
+	};
+	
+	this.createPublicGameDiv = function(channel, creator, key) {
+		var msgDiv = $('<div>', {
+			html: this.escapeHTML(creator + ":" + key),
+			class: "publicGame"});
+		return msgDiv;
 	};
 	
 	this.createMessageDiv = function(message, classes) {
@@ -262,6 +302,7 @@ Chat.Tabs = function(chat) {
 		chat.userList.html("");
 		chat.userList.children().remove();
 		
+		$('<div>', { text: "Users", class: "chat_caption"}).appendTo(chat.userList);
 		if (typeof chat.users[channel] != 'undefined') {
 			for (var user in chat.users[channel]) {
 				var userEntry = $('<div>', {

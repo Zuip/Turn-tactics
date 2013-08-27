@@ -12,6 +12,8 @@ Chat.Games = function(chat) {
 	this.challenged = [];
 	// information for challenges that have been accepted
 	this.games = [];
+	// list of public games in each channel
+	this.pubgames = {};
 
 	this.getGame = function(creator, key) {
 		return this.games[creator][key];
@@ -110,6 +112,13 @@ Chat.Games = function(chat) {
 		this.games[user][game].participants[participant] = data;
 	};
 	
+	this.doesParticipantExist = function(user, game, participant) {
+		if (typeof this.games[user][game].participants[participant] != "undefined") {
+			return true;
+		}
+		return false;
+	}
+	
 	this.getGameInvited = function(user, game) {
 		return this.games[user][game].invited;
 	};
@@ -189,6 +198,38 @@ Chat.Games = function(chat) {
 		}
 	};
 
+	this.getPubGameList = function(channel) {
+		if (typeof this.pubgames[channel] != "undefined") {
+			return this.pubgames[channel];
+		}
+		return {};
+	}
+	
+	this.setPubGameList = function(channel, list) {
+		if (list == null) {
+			list = {};
+		}
+		this.pubgames[channel] = list;
+	}
+	
+	this.addPublicGame = function(channel, creator, key) {
+		if (typeof this.pubgames[channel] == "undefined") {
+			this.pubgames[channel] = {};
+		}
+		if (typeof this.pubgames[channel][creator] == "undefined") {
+			this.pubgames[channel][creator] = {};
+		}
+		this.pubgames[channel][creator][key] = true;
+	};
+	
+	this.deletePublicGame = function(channel, creator, key) {
+		if (typeof this.pubgames[channel] != "undefined"
+		&& typeof this.pubgames[channel][creator] != "undefined"
+		&& typeof this.pubgames[channel][creator][key] != "undefined") {
+			delete this.pubgames[channel][creator][key];
+		}
+	}
+	
 	// An user left a game
 	// This keeps context menus and setup window updated
 	this.removeParticipant = function(user, key, removed) {

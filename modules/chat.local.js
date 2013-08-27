@@ -9,17 +9,36 @@ var PRIVATE_CHANNEL_SEPARATOR = "!";
 exports.doesGameExist = function(users, creator, key) {
 	var isValid = (users[creator].games[creator] != "undefined") 
 				&& (getGameStatus(users[creator].games, creator, key) == GAME_CREATOR);
-	return isValid;
+	var isPublic = false;
+	var numPlayers = 0;
+	
+	if (isValid) {
+		isPublic = users[creator].games[creator][key].isPublic;
+		numPlayers = 1;
+		numPlayers = numPlayers + Object.keys(users[creator].games[creator][key].participants).length;
+	}
+	
+	var result = {success: isValid, isPublic: isPublic, numPlayers: numPlayers};
+	return result;
 }
 
 exports.acceptChallenge = function(users, creator, key, socket) {
 	if (typeof users[creator] != "undefined") {
-		// Remove user from invited
+		// If user is in invite list, delete entry
 		var index = users[creator].games[creator][key].invited.indexOf(socket.username);
-		users[creator].games[creator][key].invited.splice(index, 1);
+		if (index != -1) {
+			users[creator].games[creator][key].invited.splice(index, 1);
+		}
 		// Update game information for creator
 		users[creator].games[creator][key].status = GAME_CREATOR;
 		users[creator].games[creator][key].participants[socket.username] = {accepted: false};
+	}
+	// If user joins a public game, these entries won't exist beforehand
+	if (typeof socket.games[creator] == "undefined") {
+		socket.games[creator] = {};
+	}
+	if (typeof socket.games[creator][key] == "undefined") {
+		socket.games[creator][key] = {};
 	}
 	// Update participant status
 	socket.games[creator][key].status = GAME_JOINED;
@@ -50,7 +69,7 @@ exports.sendChallengeAccept = function(users, creator, key, socket) {
 	}
 }
 
-exports.refuseChallenge = function(creator, key, socket) {
+exports.refuseChallenge = function(users, creator, key, socket) {
 	users[creator].emit("challengeRefused", socket.username, key);
 	// remove the user from the invited list
 	var index = users[creator].games[creator][key].invited.indexOf(socket.username);
@@ -59,20 +78,54 @@ exports.refuseChallenge = function(creator, key, socket) {
 	delete users[socket.username].games[creator][key];
 }
 
-exports.createChallenge = function(users, socket, invited, key, channel) {
+exports.createChallenge = function(users, games, socket, invited, key, channel, isPublic) {
 	socket.games[socket.username][key] = {status: GAME_CREATOR, invited: [],
-										participants: {}};
-	socket.numGames += 1;
-	if (typeof (users[invited].games[socket.username]) == "undefined") {
+										participants: {}, isPublic: isPublic};
+	if (isPublic) {
+		exports.createPublicGame(users, games, channel, socket.username, key);
+		socket.games[socket.username][key].channel = channel;
+		socket.emit('challengeCreated', null, key);
+	} else if (typeof (users[invited].games[socket.username]) == "undefined"
+	|| typeof (users[invited].games[socket.username][key]) == "undefined") {
 		users[invited].games[socket.username] = [];
+		users[socket.username].games[socket.username][key].invited.push(invited);
+		users[invited].games[socket.username][key] = {status: GAME_INVITED};
+		socket.emit('challengeCreated', invited, key);
+		users[invited].emit("newChallenge", channel, socket.username, key);
 	}
-	users[socket.username].games[socket.username][key].invited.push(invited);
-	users[invited].games[socket.username][key] = {status: GAME_INVITED};
-	socket.emit('challengeCreated', invited, key);
+	socket.numGames += 1;
+	
 	var gameChannel = getGameRoomName(socket.username, key);
 	socket.join(gameChannel);
 	socket.channels[gameChannel] = true;
-	users[invited].emit("newChallenge", channel, socket.username, key);
+}
+
+exports.setGameType = function(users, channel, creator, key, isPublic) {
+	users[creator].games[creator][key].isPublic = isPublic;
+	if (isPublic) {
+		newPublicGame(users, channel, creator, key);
+	} else {
+		publicGameClosed(users, channel, creator, key);
+	}
+}
+
+exports.createPublicGame = function(users, games, channel, creator, key) {
+	if (typeof games[channel] == "undefined") {
+		games[channel] = {};
+	}
+	if (typeof games[channel][creator] == "undefined") {
+		games[channel][creator] = {};
+	}
+	games[channel][creator][key] = true;
+	exports.newPublicGame(users, channel, creator, key);
+}
+
+exports.newPublicGame = function(users, channel, creator, key) {
+	users[creator].broadcast.to(channel).emit('newPublicChallenge', channel, creator, key);
+}
+
+exports.publicGameClosed = function(users, channel, creator, key) {
+	users[creator].broadcast.to(channel).emit('publicChallengeClosed', channel, creator, key);
 }
 
 exports.addInvite = function(users, channel, creator, key, user) {
@@ -84,8 +137,16 @@ exports.addInvite = function(users, channel, creator, key, user) {
 	users[user].emit("newChallenge", channel, creator, key);
 }
 
-exports.closeGame = function(users, creator, key, confirm) {
+exports.closeGame = function(users, games, creator, key, confirm) {
 	users[creator].numGames -= 1;
+	// If the game is a public game, send cancel message
+	// also remove the game from public game list
+	if (users[creator].games[creator][key].isPublic) {
+		var channel = users[creator].games[creator][key].channel;
+		exports.publicGameClosed(users, channel, creator, key);
+		delete games[channel][creator][key];
+	}
+	
 	// Send cancel message to all participants
 	for (user in users[creator].games[creator][key].participants) {
 		if (typeof users[user] != "undefined") {

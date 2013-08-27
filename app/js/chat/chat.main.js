@@ -41,18 +41,30 @@ Chat = function() {
 		this.Tabs.tabs = $('<div>', {
 		id: 'tabs',
 		}).appendTo(chatDiv);
+		this.Tabs.tabs.hide();
+		
+		this.leftColumn = $('<div>', {
+		id: 'chatLeft',
+		}).appendTo(chatDiv);
+		
+		this.gameWindow = $('<div>', {
+		id: 'gameWindow',
+		}).appendTo(this.leftColumn);
+		this.gameWindow.hide();
 		
 		this.msgWindow = $('<div>', {
 		id: 'msgWindow',
-		}).appendTo(chatDiv);
+		}).appendTo(this.leftColumn);
 		
 		this.userList = $('<div>', {
 		id: 'userList',
 		}).appendTo(chatDiv);
+		this.userList.hide();
 		
 		this.chatInput = $('<div>', {
 		id: 'chatInput',
 		}).appendTo(chatDiv);
+		this.chatInput.hide();
 		
 		this.chatInputText = $('<input>', { type: 'text',
 		id: 'chatInputText'
@@ -93,7 +105,7 @@ Chat = function() {
 		var command = words[0].substr(1).toLowerCase();
 		if (command == "help") {
 			this.Messages.addMessage({type: "current"}, {time: new Date(), type: "notice", 
-			msg: "The commands are: help, join, leave, cancel, close"});
+			msg: "The commands are: help, pubgame, join, leave, cancel, close"});
 			this.Tabs.updateCurrentTab();
 			element.val("");
 		} else if (command == "join") {
@@ -108,6 +120,11 @@ Chat = function() {
 			this.Tabs.currentTab.type == this.Tabs.TAB_CHANNEL) {
 				this.socket.emit("leaveChannel", this.Tabs.currentTab.channel);
 				this.Tabs.deleteCurrentTab();
+				element.val("");
+			}
+		} else if (command == "pubgame") {
+			if (this.Tabs.currentTab.type == this.Tabs.TAB_CHANNEL) {
+				this.socket.emit('createChallenge', this.Tabs.currentTab.channel, true);
 				element.val("");
 			}
 		} else if (command == "cancel") {

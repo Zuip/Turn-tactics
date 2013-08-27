@@ -172,7 +172,7 @@ h3 {
 	padding: 0;
 	margin: 0;
 	border: 1px solid #000;
-	overflow: visible;
+	overflow: hidden;
 	background: #eee;
 }
 
@@ -180,6 +180,10 @@ h3 {
 	padding: 3px;
 	margin: 0;
 	border-bottom: 1px solid #000;
+}
+
+.chat_caption {
+	font-style: italic;
 }
 
 .chatTab {
@@ -194,12 +198,19 @@ h3 {
 	background-color: #aaa;
 }
 
+#gameWindow {
+	border-right: 1px solid #000;
+	border-bottom: 1px solid #000;
+	margin-right: -1px;
+	padding: 0;
+	height: 50px;
+	overflow: auto;
+}
+
 #msgWindow {
-	float: left;
 	border-right: 1px solid #000;
 	margin-right: -1px;
 	padding: 0;
-	width: 60%;
 	height: 200px;
 	overflow: auto;
 }
@@ -208,8 +219,14 @@ h3 {
 	color: #CFC925;
 }
 
-#userList {
+#chatLeft {
 	float: left;
+	width: 60%;
+	clear: both;
+}
+
+#userList {
+	float: right;
 	padding: 0px;
 	margin: 0px;
 	width: 40%;

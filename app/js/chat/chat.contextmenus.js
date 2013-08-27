@@ -9,6 +9,7 @@ Chat.ContextMenus = function(chat) {
 	this.createContextMenus = function() {
 		this.createUserMenu();
 		this.createChallengeResponseMenu();
+		this.createPublicChallengeMenu();
 	};
 	
 	this.createUserMenu = function() {
@@ -48,7 +49,7 @@ Chat.ContextMenus = function(chat) {
 						var properties = false;
 						for (var game in chat.Games.getUserGames(chat.username)) {
 							if (!chat.Games.doesChallengeByMeExist(username, game)
-							&& chat.Games.getGameParticipants(chat.username, game).indexOf(username) == -1) {
+							&& chat.Games.doesParticipantExist(chat.username, game, username)) {
 								existing["invite-"+game] = {name: "Invite to #"+game };
 								properties = true;
 							}
@@ -67,7 +68,7 @@ Chat.ContextMenus = function(chat) {
 	this.userMenuCallback = function(key, options, username) {
 		if (key == "challenge") {
 			if (!options.$trigger.hasClass('chat_userself')) {
-				chat.socket.emit('createChallenge', chat.Tabs.currentTab.channel, username);
+				chat.socket.emit('createChallenge', chat.Tabs.currentTab.channel, false, username);
 			}
 		} else if (key.substr(0, 6) == "invite") {
 			var gamekey = key.substr(7);
@@ -127,4 +128,26 @@ Chat.ContextMenus = function(chat) {
 		);
 	
 	};
+	
+	
+	this.createPublicChallengeMenu = function() {
+		var self = this;
+		$.contextMenu(
+			{
+				selector: '.publicGame', 
+				callback: function(key, options) {
+					var username = options.$trigger.data("challenger");
+					var gamekey = options.$trigger.data("key");
+					if (key == "joinChallenge") {
+						chat.socket.emit('acceptChallenge', username, gamekey);
+					}
+				},
+				items: {
+					"joinChallenge": {name: "Join"}
+				}
+			}
+		);
+	
+	};
+	
 };
