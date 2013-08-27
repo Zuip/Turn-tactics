@@ -15,10 +15,8 @@ Chat.Events = function(chat) {
 			chat.socket = io.connect("http://"+window.location.host+"/chat");
 			chat.socket.on('connect', function() {
 				chat.connected = true;
-				chat.Tabs.tabs.show();
-				chat.userList.show();
-				chat.chatInput.show();
 				self.initChatEvents();
+				chat.setInteraction(true);
 				chat.chatInputText.attr("disabled", false);
 				chat.Messages.messages[""] = new Array();
 				chat.joinChannel("main");
@@ -30,6 +28,8 @@ Chat.Events = function(chat) {
 				chat.Tabs.updateCurrentTab();
 			});
 		
+		} else {
+			chat.setInteraction(true);
 		}
 	};
 	

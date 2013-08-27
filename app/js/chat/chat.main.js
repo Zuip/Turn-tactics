@@ -41,7 +41,6 @@ Chat = function() {
 		this.Tabs.tabs = $('<div>', {
 		id: 'tabs',
 		}).appendTo(chatDiv);
-		this.Tabs.tabs.hide();
 		
 		this.leftColumn = $('<div>', {
 		id: 'chatLeft',
@@ -50,7 +49,6 @@ Chat = function() {
 		this.gameWindow = $('<div>', {
 		id: 'gameWindow',
 		}).appendTo(this.leftColumn);
-		this.gameWindow.hide();
 		
 		this.msgWindow = $('<div>', {
 		id: 'msgWindow',
@@ -59,7 +57,6 @@ Chat = function() {
 		this.userList = $('<div>', {
 		id: 'userList',
 		}).appendTo(chatDiv);
-		this.userList.hide();
 		
 		this.chatInput = $('<div>', {
 		id: 'chatInput',
@@ -90,8 +87,21 @@ Chat = function() {
 			self.Messages.sendMessage(self.chatInputText);
 		});
 		
+		this.setInteraction(false);
 		this.Tabs.updateTabs();
 		this.Tabs.changeToCurrentTab();
+	};
+	
+	this.setInteraction = function(status) {
+		if (status) {
+			this.Tabs.tabs.show();
+			this.gameWindow.show();
+			this.userList.show();
+		} else {
+			this.Tabs.tabs.hide();
+			this.gameWindow.hide();
+			this.userList.hide();
+		}
 	};
 	
 	this.joinChannel = function(channel) {
