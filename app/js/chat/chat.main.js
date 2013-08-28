@@ -61,7 +61,6 @@ Chat = function() {
 		this.chatInput = $('<div>', {
 		id: 'chatInput',
 		}).appendTo(chatDiv);
-		this.chatInput.hide();
 		
 		this.chatInputText = $('<input>', { type: 'text',
 		id: 'chatInputText'
@@ -97,10 +96,12 @@ Chat = function() {
 			this.Tabs.tabs.show();
 			this.gameWindow.show();
 			this.userList.show();
+			this.chatInput.show();
 		} else {
 			this.Tabs.tabs.hide();
 			this.gameWindow.hide();
 			this.userList.hide();
+			this.chatInput.hide();
 		}
 	};
 	

@@ -21,6 +21,9 @@ var REQUIRE_INVITED_ONLINE = true;
 var MAX_USERS_PER_GAME = 4;
 var MAX_GAMES_CREATED_PER_USER = 2;
 
+var FLOOD_INTERVAL = 5;
+var FLOOD_AMOUNT = 10;
+
 // Allow channel-specific public challenges?
 var PUBLIC_CHALLENGES = true;
 /* Close public games when the game creator leaves?
@@ -37,6 +40,27 @@ var GAME_CLOSED = 0;
 var GAME_CREATOR = 1;
 var GAME_INVITED = 2;
 var GAME_JOINED = 3;
+
+/**
+ * If too many messages are sent too quickly, user gets kicked out from the chat
+ */
+handleFlood = function(socket) {
+	
+	if (typeof users[socket.username].flood.lastMessage != "undefined") {
+		++users[socket.username].flood.messageAmount;
+	} else {
+		users[socket.username].flood.lastMessage = new Date().getTime();
+		users[socket.username].flood.messageAmount = 1;
+	}
+	if (users[socket.username].flood.lastMessage + FLOOD_INTERVAL * 1000 < new Date().getTime()) {
+		// The interval passed, reset timer
+		users[socket.username].flood.lastMessage = new Date().getTime();
+		users[socket.username].flood.messageAmount = 1;
+	} else if (users[socket.username].flood.messageAmount > FLOOD_AMOUNT) {
+		socket.emit("excessFlood");
+		socket.manager.onClientDisconnect(socket.id);
+	}
+}
 
 /**
  * Gets all challenge data
@@ -343,10 +367,22 @@ module.exports = function(io, pool) {
 	});
 
 	chat.on('connection', function(socket) {
+	
+		// Overwrite event listener
+		var $emit = socket.$emit;
+		socket.$emit = function() {
+			if (arguments[0] != "disconnect") {
+				console.log('***','on',Array.prototype.slice.call(arguments));
+				handleFlood(socket);
+				$emit.apply(socket, arguments);
+			}
+		};
+		
 		socket.username = socket.handshake.username;
 		socket.userlevel = socket.handshake.userlevel;
 		socket.games = {};
 		socket.channels = {};
+		socket.flood = {};
 		socket.numGames = 0;
 		socket.emit('serverinfo', {username: socket.username, userlevel: socket.userlevel, 
 						game_playermax: MAX_USERS_PER_GAME, 

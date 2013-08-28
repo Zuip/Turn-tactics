@@ -82,6 +82,8 @@ Chat.Messages = function(chat) {
 		var formatted = "";
 		if (message.type == "normal") {
 			formatted = this.formatUser(message.sender) + ": " + chat.Tabs.escapeHTML(message.msg);
+		} else if (message.type == "excessFlood") {
+			formatted = "Excess flood";
 		} else if (message.type == "notice") {
 			formatted = message.msg;
 		} else if (message.type == "challenge") {

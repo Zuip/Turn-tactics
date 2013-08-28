@@ -73,6 +73,11 @@ Chat.Events = function(chat) {
 			chat.chatInputText.val("");
 		});
 		
+		chat.socket.on('excessFlood', function() {
+			chat.Messages.addMessage({type: "current"}, {type: "excessFlood"});
+			chat.Tabs.updateCurrentTab();
+		});
+		
 		chat.socket.on('gameMessageDelivered', function(creator, key){
 		
 			//Todo: better solution needed: both of the types could be used
